@@ -29,3 +29,5 @@ def interp(joy):
          [.75,1],\
          [1,12]]
          """
+def clamp(num, min_value, max_value):
+   return max(min(num, max_value), min_value)

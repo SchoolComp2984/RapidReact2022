@@ -42,11 +42,11 @@ class Drive:
       self.setSpeed(left_speed, right_speed)
 
    def TankDrive(self, right_y, left_y):
-      left_speed = left_y / 2
-      right_speed = right_y / 2
+      left_speed = left_y
+      right_speed = right_y
       self.setSpeed(left_speed, right_speed)
 
-   def absoluteDrive(self, speed, leftright, desired_angle):
+   def absoluteDrive(self, speed, leftright, desired_angle, mult):
       # speed is a float value from -1 to 1
       cur_rotation = self.drive_imu.getYaw()
         # finds angle difference (delta angle) in range -180 to 180
@@ -63,10 +63,10 @@ class Drive:
       # Use PID or something in this next step idk
       #self.setSpeed(left_speed, right_speed)
       
-      self.frontLeft.set(-speed/4 - leftright/4 + steer/12/3)
-      self.frontRight.set(-speed/4 + leftright/4 - steer/12/3)
-      self.backLeft.set(-speed/4 + leftright/4 + steer/12/3)
-      self.backRight.set(-speed/4 - leftright/4 - steer/12/3)
+      self.frontLeft.set((-speed - leftright + steer) * mult)
+      self.frontRight.set((-speed + leftright - steer) * mult)
+      self.backLeft.set((-speed + leftright + steer) * mult)
+      self.backRight.set((-speed - leftright - steer) * mult)
 
    #Drive method for mecanum wheels
    def mecanumDrive(self, joy_y, joy_x, desired_angle):

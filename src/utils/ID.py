@@ -9,7 +9,7 @@ DRIVE_LEFT_BACK = 1
 #This number is not known yet
 SHOOTER = 0
 INTAKESPIN = 6
-INTAKELOWER = 5
+INTAKELIFT = 5
 
 #PWM Items
 
