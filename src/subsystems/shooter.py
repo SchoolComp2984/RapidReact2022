@@ -1,11 +1,19 @@
 from ctre import WPI_TalonFX
+from wpilib import Servo
+from rev import ColorSensorV3
 from networktables import NetworkTables
+from utils import constants
 
 class Shooter:
-   def __init__(self, _shooterMotor : WPI_TalonFX):
+   def __init__(self, _shooterMotor : WPI_TalonFX, _transportServo : Servo, _colorSensor : ColorSensorV3, _alliance_color : int):
       self.shooterMotor = _shooterMotor
-   def setSpeed(self,speed):
+      self.transportServo = _transportServo
+      self.colorSensor = _colorSensor
+      self.alliance_color = _alliance_color
+
+   def setSpeed(self, speed):
       self.shooterMotor.set(speed)
+
    def getCameraInfo(self):
       networkTableData = NetworkTables.getTable("limelight")
       tv = networkTableData.getNumber("tv", None) # valid targets (1 or 0)
@@ -14,6 +22,25 @@ class Shooter:
       ta = networkTableData.getNumber("ta", None) # % of screen covered by target
       data = [tv, tx, ty, (ta * 100)]
       return data
+   
+   def getBallStatus(self):
+      color = constants.NOBALL
+      if self.colorSensor.getProximity() > 190:
+         if self.colorSensor.getRawColor().red < self.colorSensor.getRawColor().blue:
+            color = constants.BLUE
+         else:
+            color = constants.RED
+         if color == self.alliance_color:
+            return True
+         else: 
+            return False
+      else:
+         color = constants.NOBALL
+         return None
+   
+   def transportBall(self):
+      self.transportServo.setAngle(180)
+   
    def hasTarget(self):
       target = self.getCameraInfo()[0]
       if target == 1:

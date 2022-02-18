@@ -8,13 +8,15 @@ DRIVE_LEFT_BACK = 1
 
 #This number is not known yet
 SHOOTER = 0
-INTAKESPIN = 6
-INTAKELIFT = 5
+INTAKE_SPIN = 6
+INTAKE_LIFT = 5
 
 #PWM Items
+SHOOTER_SERVO = 0
 
 #DIO Items
-
+INTAKE_BOTTOM_LIMIT = 0
+INTAKE_TOP_LIMIT = 1
 
 #Controller ports
 DRIVE_CONTROLLER = 0

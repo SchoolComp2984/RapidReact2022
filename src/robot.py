@@ -1,6 +1,6 @@
 import wpilib, ctre, rev
 from commands import shoot
-from utils import ID, pid, math_functions, imutil
+from utils import ID, pid, math_functions, imutil, constants
 from subsystems import intaker, rotary_joystick, drive, shooter
 from networktables import NetworkTables
 import math
@@ -19,7 +19,7 @@ class MyRobot(wpilib.TimedRobot):
       self.enable_intake = True
       self.enable_color_sensor = False
       self.enable_driving = False
-      self.enable_shooter =  True
+      self.enable_shooter =  False
 
       self.pid = pid.PID()
       #Original PID constants: 0.4, 0.001, 3.2
@@ -29,19 +29,14 @@ class MyRobot(wpilib.TimedRobot):
       self.printTimer.start()
 
       #BALL COLOR PROCESSING
-      self.NOBALL = 0
-      self.BLUE = 1
-      self.RED = 2
-      self.alliance_color = self.RED
-      
-      self.ball_color = self.NOBALL
+      self.alliance_color = constants.RED
       self.driver_station = wpilib.DriverStation
       self.alliance = self.driver_station.getAlliance()
       # To access what type of alliance it is: wpilib.DriverStation.Alliance.kBlue
       if wpilib.DriverStation.Alliance.kBlue == self.alliance:
-         self.alliance_color = self.BLUE
+         self.alliance_color = constants.BLUE
       else:
-         self.alliance_color = self.RED
+         self.alliance_color = constants.RED
 
       #BATTERY POWER LIMITING
       self.battery_voltage = self.driver_station.getBatteryVoltage()
@@ -55,6 +50,7 @@ class MyRobot(wpilib.TimedRobot):
       self.backRight = ctre.WPI_TalonFX(ID.DRIVE_RIGHT_BACK)
       
       self.shooterMotor = ctre.WPI_TalonFX(ID.SHOOTER)
+      self.shooterServo = wpilib.Servo(ID.SHOOTER_SERVO)
 
       if (self.enable_shooter):
          self.shooter_control_mode = ctre.TalonFXControlMode(2) 
@@ -78,12 +74,11 @@ class MyRobot(wpilib.TimedRobot):
 
       self.drive_imu = imutil.Imutil(self.intakeLift)
 
-      self.color_sensor = rev.ColorSensorV3(wpilib.I2C.Port(0))
+      self.colorSensor = rev.ColorSensorV3(wpilib.I2C.Port(0))
 
-      self.talon_motors = [
-         self.shooterMotor, 
-         self.intakeSpin, 
-         self.intakeLift, 
+      self.talon_motors = [ 
+         self.intakeSpin,
+         self.intakeLift,
          self.backLeft, 
          self.backRight, 
          self.frontLeft, 
@@ -99,7 +94,7 @@ class MyRobot(wpilib.TimedRobot):
 
       #subsystems: These combine multiple components into a coordinated system
       self._drive = drive.Drive(self.frontLeft, self.backLeft, self.frontRight, self.backRight, self.drive_imu, self.pid)
-      self._shooter = shooter.Shooter(self.shooterMotor)
+      self._shooter = shooter.Shooter(self.shooterMotor, self.shooterServo, self.colorSensor, self.alliance_color)
       self._intaker = intaker.Intaker(self.intakeLift, self.intakeSpin)
 
       #commands: These utilize subsystems to perform autonomous routines.
@@ -111,12 +106,13 @@ class MyRobot(wpilib.TimedRobot):
       self.backLeft.setInverted(True)
       self.frontRight.setInverted(False)
       self.backRight.setInverted(False)
-      self.intakeSpin.setInverted(False)
+      self.intakeSpin.setInverted(True)
 
       for motor in self.talon_motors:
          motor.setNeutralMode(ctre.NeutralMode.Brake)
 
-      self.rotary_controller.reset_angle(self._drive.getYaw())
+      if self.enable_driving:
+         self.rotary_controller.reset_angle(self._drive.getYaw())
       
    def teleopPeriodic(self):
       try:
@@ -125,7 +121,7 @@ class MyRobot(wpilib.TimedRobot):
 
          if self.printTimer.hasPeriodPassed(0.5):
             print(self.motor_power_multiplyer)
-            
+
          #SHOOTER
          vel = 0
          #self.shooterMotor.set(self.drive_controller.getRawAxis(1))
@@ -161,27 +157,16 @@ class MyRobot(wpilib.TimedRobot):
             if self.operator_controller.getRawButton(6):
                self._intaker.spin()
             else:
-               self._intaker.spin(0)
-               
-         #COLOR SENSOR
+               self._intaker.stop()
+         
+         #COLOR SENSOR TESTING
          #Nothing in front of sensor ~ 180, gets greater as object gets closer
          if self.enable_color_sensor:
-            if self.color_sensor.getProximity() > 190:
-               if self.color_sensor.getRawColor().red < self.color_sensor.getRawColor().blue:
-                  self.ball_color = self.BLUE
-               else:
-                  self.ball_color = self.RED
-               if self.ball_color == self.alliance_color:
-                  print("shoot")
-               else: 
-                  print("discard")
-            else:
-               self.ball_color = self.NOBALL
-               print("no ball")
+            print(self._shooter.getBallStatus())
 
          #DRIVING
          if (self.enable_driving):
-            if self.operator_controller.getRawButton(1):
+            if self.operator_controller.getRawButton(7):
                # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
                self._shoot.execute()
                self.rotary_controller.reset_angle(self._shoot.target_angle)
