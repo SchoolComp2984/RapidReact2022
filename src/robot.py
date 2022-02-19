@@ -166,9 +166,10 @@ class MyRobot(wpilib.TimedRobot):
 
          #DRIVING
          if (self.enable_driving):
+            self._shoot.auto_execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer)
             if self.operator_controller.getRawButton(7):
                # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
-               self._shoot.execute()
+               
                self.rotary_controller.reset_angle(self._shoot.target_angle)
             else:
                angle = self.rotary_controller.rotary_inputs()

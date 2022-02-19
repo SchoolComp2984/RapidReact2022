@@ -32,3 +32,11 @@ def interp(joy):
       """
 def clamp(num, min_value, max_value):
       return max(min(num, max_value), min_value)
+
+def shootInterp(limelight_angle):
+      # shooting rpm for different distances
+      # make this better
+      array = [ \
+      [18,5000],\
+      [3,20000]]
+      return 15000
