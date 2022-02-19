@@ -1,11 +1,11 @@
-from ctre import WPI_TalonSRX, PigeonIMU
+from ctre import WPI_TalonFX
 import math
 from utils import pid, imutil
 
 # parameter : type
 class Drive:
    #CONTRUCTOR
-   def __init__(self, _frontLeft : WPI_TalonSRX, _backLeft : WPI_TalonSRX, _frontRight : WPI_TalonSRX, _backRight : WPI_TalonSRX, _drive_imu : imutil, _pid : pid):
+   def __init__(self, _frontLeft : WPI_TalonFX, _backLeft : WPI_TalonFX, _frontRight : WPI_TalonFX, _backRight : WPI_TalonFX, _drive_imu : imutil, _pid : pid):
       self.frontLeft = _frontLeft
       self.backLeft = _backLeft
 
@@ -32,6 +32,9 @@ class Drive:
       self.setLeftSpeed(left)
       self.setRightSpeed(right)
 
+   def getYaw(self):
+      return self.drive_imu.getYaw()
+
    #DRIVE FUNCTIONS
    def arcadeDrive(self, y, x):
       left_speed = y + x
@@ -39,11 +42,11 @@ class Drive:
       self.setSpeed(left_speed, right_speed)
 
    def TankDrive(self, right_y, left_y):
-      left_speed = left_y / 2
-      right_speed = right_y / 2
+      left_speed = left_y
+      right_speed = right_y
       self.setSpeed(left_speed, right_speed)
 
-   def absoluteDrive(self, speed, desired_angle):
+   def absoluteDrive(self, speed, leftright, desired_angle, mult):
       # speed is a float value from -1 to 1
       cur_rotation = self.drive_imu.getYaw()
         # finds angle difference (delta angle) in range -180 to 180
@@ -58,27 +61,40 @@ class Drive:
         #self._drive.DifferentialDrive(left, right)
       # self._drive.arcadeDrive(left,steer)
       # Use PID or something in this next step idk
-      self.setSpeed(left_speed, right_speed)
+      #self.setSpeed(left_speed, right_speed)
+      
+      self.frontLeft.set((-speed - leftright + steer) * mult)
+      self.frontRight.set((-speed + leftright - steer) * mult)
+      self.backLeft.set((-speed + leftright + steer) * mult)
+      self.backRight.set((-speed - leftright - steer) * mult)
 
    #Drive method for mecanum wheels
    def mecanumDrive(self, joy_y, joy_x, desired_angle):
       #Set power without turning
-      self.flspeed = joy_y + joy_x
-      self.frspeed = joy_y - joy_x
-      self.brspeed = self.flspeed
-      self.blspeed = self.frspeed
+      flspeed = joy_y + joy_x
+      frspeed = joy_y - joy_x
+      brspeed = flspeed
+      blspeed = frspeed
       #Add turning
-      cur_rotation = self.drive_imu.getYaw()
-      delta_angle = desired_angle - cur_rotation
-      delta_angle = ((delta_angle + 180) % 360) - 180
-      steer = max(-1, min(1, self.pid.steer_pid(delta_angle)/12))
-      self.flspeed -= steer
-      self.frspeed += steer
-      self.blspeed -= steer
-      self.brspeed += steer
+      # cur_rotation = self.drive_imu.getYaw()
+      # delta_angle = desired_angle - cur_rotation
+      # delta_angle = ((delta_angle + 180) % 360) - 180
+      # steer = max(-1, min(1, self.pid.steer_pid(delta_angle)/12))
+      steer = 0
+      flspeed -= steer
+      frspeed += steer
+      blspeed -= steer
+      brspeed += steer
       #Set speed for all wheels
-      self.frontLeft.set(self.flspeed)
-      self.frontRight.set(self.frspeed)
-      self.backLeft.set(self.blspeed)
-      self.backRight.set(self.brspeed)
+      self.frontLeft.set(flspeed)
+      self.frontRight.set(frspeed)
+      self.backLeft.set(blspeed)
+      self.backRight.set(brspeed)
+
+   def driftDrive(self, left, right, x):
+      speed = left + right
+      speed_left = speed - x
+      speed_right = speed + x
+      self.setLeftSpeed(speed_left)
+      self.setRightSpeed(speed_right)
    
