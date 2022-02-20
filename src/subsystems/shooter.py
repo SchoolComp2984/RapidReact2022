@@ -23,6 +23,9 @@ class Shooter:
       data = [tv, tx, ty, (ta * 100)]
       return data
    
+   def printBallStatus(self):
+      print("prox, red, blue: ", self.colorSensor.getProximity(), self.colorSensor.getRawColor().red, self.colorSensor.getRawColor().blue)
+
    def getBallStatus(self):
       color = constants.NOBALL
       if self.colorSensor.getProximity() > 190:

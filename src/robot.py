@@ -18,8 +18,9 @@ class MyRobot(wpilib.TimedRobot):
       #SUBSYSTEM ENABLERS
       self.enable_intake = True
       self.enable_color_sensor = False
-      self.enable_driving = False
-      self.enable_shooter =  False
+      self.enable_driving = True
+      self.enable_shooter =  True
+      self.enable_shooter_test = True
 
       self.pid = pid.PID()
       #Original PID constants: 0.4, 0.001, 3.2
@@ -59,6 +60,8 @@ class MyRobot(wpilib.TimedRobot):
          self.shooterMotor.configNominalOutputReverse(0.1,10)
          self.shooterMotor.configPeakOutputForward(0.99,10) # limit to 0.1x of the max power
          self.shooterMotor.configPeakOutputReverse(0.5,10) # limit to 0.1x of the max power
+         limits = ctre.SupplyCurrentLimitConfiguration(True, 40, 40, 0)
+         self.shooterMotor.configSupplyCurrentLimit(limits, 10)
          #self.shooterMotor.setNeutralMode(self.shooterMotor.NeutralMode.Coast)
          self.shooterMotor.selectProfileSlot(0,0)
          self.shooterMotor.config_kF(0, 0.3, 10)
@@ -69,8 +72,8 @@ class MyRobot(wpilib.TimedRobot):
          self.shooterMotor.configMotionCruiseVelocity(200000,10)
          #self.shooterMotor.configMotionAcceleration(20,10)
 
-      self.intakeSpin = ctre.WPI_TalonSRX(ID.INTAKESPIN)
-      self.intakeLift = ctre.WPI_TalonSRX(ID.INTAKELIFT)
+      self.intakeSpin = ctre.WPI_TalonSRX(ID.INTAKE_SPIN)
+      self.intakeLift = ctre.WPI_TalonSRX(ID.INTAKE_LIFT)
 
       self.drive_imu = imutil.Imutil(self.intakeLift)
 
@@ -126,15 +129,15 @@ class MyRobot(wpilib.TimedRobot):
          vel = 0
          #self.shooterMotor.set(self.drive_controller.getRawAxis(1))
          if (self.operator_controller.getRawButton(1)):
-            vel = 25000
+            vel = 25000 # WAY TOO FAST
          elif (self.operator_controller.getRawButton(2)):
-            vel = 20000
+            vel = 20000 # maybe too fast
          elif (self.operator_controller.getRawButton(3)):
-            vel = 15000
+            vel = 15000 # speed for long distance
          elif (self.operator_controller.getRawButton(4)):
-            vel = 10000
+            vel = 10000 # speed for short distance
          elif (self.operator_controller.getRawButton(5)):
-            vel = 5000
+            vel = 5000 # too slow
          if (self.enable_shooter):
             current_vel = self.shooterMotor.getSelectedSensorVelocity(0)
             delta = vel-current_vel
@@ -166,7 +169,7 @@ class MyRobot(wpilib.TimedRobot):
 
          #DRIVING
          if (self.enable_driving):
-            self._shoot.auto_execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer)
+            #self._shoot.auto_execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer)
             if self.operator_controller.getRawButton(7):
                # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
                
@@ -177,6 +180,12 @@ class MyRobot(wpilib.TimedRobot):
                speed_y = self.drive_controller.getRawAxis(1)
                self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
                #self._drive.mecanumDrive(speed_y, -speed_x, angle)
+         
+         if self.enable_shooter_test:
+            if self.operator_controller.getRawButton(8):
+               self._shoot.transporting(0)
+            if self.operator_controller.getRawButton(9):
+               self._shoot.transporting(180)
       except:
          raise
 

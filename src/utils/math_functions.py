@@ -11,6 +11,9 @@ def interp(joy):
       [.5,4],\
       [.85,6],\
       [1,12]]
+      return interp_Array(joy, ary)
+      
+def interp_Array(self, joy, ary):
       if joy <= ary[0][0]:
             return ary[0][1]
       if joy >= ary[len(ary) - 1][0]: 
@@ -39,4 +42,4 @@ def shootInterp(limelight_angle):
       array = [ \
       [18,5000],\
       [3,20000]]
-      return 15000
+      return interp_Array(limelight_angle, array)
