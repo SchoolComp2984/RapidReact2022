@@ -23,8 +23,8 @@ class MyRobot(wpilib.TimedRobot):
       self.enable_shooter_test = True
 
       self.pid = pid.PID()
-      #Original PID constants: 0.4, 0.001, 3.2
-      self.pid.set_pid(0.4, 0.001, 2, 0)
+      #Original PID constants: 0.4, 0.001, 2
+      self.pid.set_pid(0.01, 0.000025, 0.05, 0)
 
       self.printTimer = wpilib.Timer()
       self.printTimer.start()
@@ -75,7 +75,7 @@ class MyRobot(wpilib.TimedRobot):
       self.intakeSpin = ctre.WPI_TalonSRX(ID.INTAKE_SPIN)
       self.intakeLift = ctre.WPI_TalonSRX(ID.INTAKE_LIFT)
 
-      self.drive_imu = imutil.Imutil(self.intakeLift)
+      self.drive_imu = imutil.Imutil(self.intakeSpin)
 
       self.colorSensor = rev.ColorSensorV3(wpilib.I2C.Port(0))
 
@@ -89,6 +89,9 @@ class MyRobot(wpilib.TimedRobot):
       ]
 
       # Might change to XBOX controller depending on it working or not.
+      while rotary_joystick.RotaryJoystick(ID.DRIVE_CONTROLLER).getRawButton(12) or not rotary_joystick.RotaryJoystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
+         ID.OPERATOR_CONTROLLER = 1- ID.OPERATOR_CONTROLLER 
+         ID.DRIVE_CONTROLLER = 1- ID.DRIVE_CONTROLLER 
       self.rotary_controller = rotary_joystick.RotaryJoystick(ID.OPERATOR_CONTROLLER)
       self.operator_controller = wpilib.interfaces.GenericHID(ID.OPERATOR_CONTROLLER)
       self.drive_controller = wpilib.XboxController(ID.DRIVE_CONTROLLER)
@@ -123,7 +126,7 @@ class MyRobot(wpilib.TimedRobot):
          self.motor_power_multiplyer = math_functions.clamp(self.battery_voltage - 9.5, 0, 1)
 
          if self.printTimer.hasPeriodPassed(0.5):
-            print(self.motor_power_multiplyer)
+            print("mult= ", self.motor_power_multiplyer)
 
          #SHOOTER
          vel = 0
@@ -151,8 +154,8 @@ class MyRobot(wpilib.TimedRobot):
             #self.shooterMotor.set(ctre.TalonFXControlMode.Velocity, vel/10.0)
             self.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr)
             #self.shooterMotor.set(ctre.ControlMode.Velocity, vel * self.COUNTS_PER_RAD / 10, ctre.DemandType.ArbitraryFeedForward, 2)
-            if self.printTimer.hasPeriodPassed(0.5):
-               print(pwr, " curr=",current_vel," set_vel=",vel)
+            #if self.printTimer.hasPeriodPassed(0.5):
+               #print(pwr, " curr=",current_vel," set_vel=",vel)
                #print(self.shooterMotor.getSelectedSensorVelocity(0))
             
          #INTAKER
@@ -164,12 +167,13 @@ class MyRobot(wpilib.TimedRobot):
          
          #COLOR SENSOR TESTING
          #Nothing in front of sensor ~ 180, gets greater as object gets closer
-         if self.enable_color_sensor:
-            print(self._shooter.getBallStatus())
+         #if self.enable_color_sensor:
+            #print(self._shooter.getBallStatus())
 
+         # print ("IMU= ", self.drive_imu.getYaw())
          #DRIVING
          if (self.enable_driving):
-            #self._shoot.auto_execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer)
+            self._shoot.auto_execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer)
             if self.operator_controller.getRawButton(7):
                # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
                
@@ -183,9 +187,9 @@ class MyRobot(wpilib.TimedRobot):
          
          if self.enable_shooter_test:
             if self.operator_controller.getRawButton(8):
-               self._shoot.transporting(0)
+               self._shoot.transporting(ID.SERVO_MIN)
             if self.operator_controller.getRawButton(9):
-               self._shoot.transporting(180)
+               self._shoot.transporting(ID.SERVO_MAX)
       except:
          raise
 

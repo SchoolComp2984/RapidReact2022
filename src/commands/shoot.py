@@ -2,7 +2,7 @@ import math, ctre, wpilib
 from rev import RelativeEncoder
 from subsystems.drive import Drive
 from subsystems.shooter import Shooter
-from utils import math_functions
+from utils import math_functions, ID
 
 class Shoot:
    TURNING = 0
@@ -13,10 +13,11 @@ class Shoot:
    POSITIONING = 5
    SPINNING = 6
    FIRING = 7
+   RELAXING = 8
    DEFAULT = -1
    state = TURNING
-   min_LimelightDistance = 18 #angle
-   max_LimelightDistance = 3 #angle
+   min_LimelightDistance = 15 #angle
+   max_LimelightDistance = 0 #angle
    flywheel_desiredSpeed = 0
 
    def __init__(self, _drive : Drive, _shooter : Shooter):
@@ -43,12 +44,15 @@ class Shoot:
       delta_angle = self.shooter.getCameraInfo()[1] # get angle of target
       self.target_angle = self.drive.getYaw() - delta_angle
       if self.shooter.getCameraInfo()[2] > self.min_LimelightDistance:
-         power = -.5
-      if self.shooter.getCameraInfo()[2] < self.max_LimelightDistance:
          power = .5
+      if self.shooter.getCameraInfo()[2] < self.max_LimelightDistance:
+         power = -.5
+      if not self.shooter.hasTarget():
+         power = 0
+         self.target_angle = self.drive.getYaw()
       self.drive.absoluteDrive(power, 0, self.target_angle, motor_power_multiplyer)
       print ("limelight x, limelight y: ", self.shooter.getCameraInfo()[1], self.shooter.getCameraInfo()[2])
-      return (power == 0 and abs(delta_angle) < 2)
+      return (power == 0 and abs(delta_angle) < 2 and self.shooter.hasTarget())
 
    def spinning(self, ball, motor_power_multiplyer):
       delta_angle = self.shooter.getCameraInfo()[1] # get angle of target
@@ -64,7 +68,7 @@ class Shoot:
       self.shooter.transportServo.setAngle(180)
 
    def spin_pid(self, debug):
-      current_vel = self.shooterMotor.getSelectedSensorVelocity(0)
+      current_vel = self.shooter.shooterMotor.getSelectedSensorVelocity(0)
       delta = self.flywheel_desiredSpeed - current_vel
       pwr = delta * 0.001
       if (pwr > 0.99):
@@ -73,7 +77,7 @@ class Shoot:
          pwr = -0.5
       if (self.flywheel_desiredSpeed == 0):
          pwr = 0
-      self.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr)
+      self.shooter.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr)
       if debug:
          print ("spin: ", current_vel, " ", self.flywheel_desiredSpeed, " ", delta)
       return (abs(delta) < 600)
@@ -93,13 +97,13 @@ class Shoot:
       self.spin_pid(False)
       self.flywheel_desiredSpeed = 0
       if self.state == self.IDLE:
-         self.shooter.transportServo.setAngle(0)
+         self.shooter.transportServo.setAngle(ID.SERVO_MIN)
          if button_pressed:
-            ball = self.shooter.getBallStatus()
+            self.ball = self.shooter.getBallStatus()
             self.shooter.printBallStatus()
-            if (ball == True or ball == False) and self.shooter.hasTarget(): #if robot has ball and sees target
+            if (self.ball == True or self.ball == False) and self.shooter.hasTarget(): #if robot has ball and sees target
                self.state = self.POSITIONING
-               print ("state=positioning ", ball)
+               print ("state=positioning ", self.ball)
       elif self.state == self.POSITIONING:
          # roughly turn and move into min/max distance
          if button_pressed:
@@ -111,7 +115,7 @@ class Shoot:
             print ("state=idle")
       elif self.state == self.SPINNING:
          if button_pressed:
-            if self.spinning(ball, motor_power_multiplyer) and self.spin_pid(True):
+            if self.spinning(self.ball, motor_power_multiplyer) and self.spin_pid(True):
                self.state = self.FIRING
                print ("state=firing")
                self.startServoTime = wpilib.Timer.getFPGATimestamp()
@@ -120,15 +124,15 @@ class Shoot:
             print ("state=idle")
       elif self.state == self.FIRING:
          if button_pressed:
-            self.spinning(ball, motor_power_multiplyer)
-            self.shooter.transportServo.setAngle(180)
+            self.spinning(self.ball, motor_power_multiplyer)
+            self.shooter.transportServo.setAngle(ID.SERVO_MAX)
             if self.startServoTime + 0.4 < wpilib.Timer.getFPGATimestamp():
                self.state = self.RELAXING
                print ("state=relaxing")
          else:
             self.state = self.RELAXING
       elif self.state == self.RELAXING:
-         self.shooter.transportServo.setAngle(0)
+         self.shooter.transportServo.setAngle(ID.SERVO_MIN)
          if self.startServoTime + 0.8 < wpilib.Timer.getFPGATimestamp():
             self.state = self.IDLE
             print ("state=idle")

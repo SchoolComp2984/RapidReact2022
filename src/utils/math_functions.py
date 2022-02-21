@@ -13,7 +13,7 @@ def interp(joy):
       [1,12]]
       return interp_Array(joy, ary)
       
-def interp_Array(self, joy, ary):
+def interp_Array(joy, ary):
       if joy <= ary[0][0]:
             return ary[0][1]
       if joy >= ary[len(ary) - 1][0]: 
@@ -40,6 +40,6 @@ def shootInterp(limelight_angle):
       # shooting rpm for different distances
       # make this better
       array = [ \
-      [18,5000],\
-      [3,20000]]
+      [15,10000],\
+      [0,15000]]
       return interp_Array(limelight_angle, array)
