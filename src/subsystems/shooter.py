@@ -24,12 +24,12 @@ class Shooter:
       return data
    
    def printBallStatus(self):
-      print("prox, red, blue: ", self.colorSensor.getProximity(), self.colorSensor.getRawColor().red, self.colorSensor.getRawColor().blue)
+      print("prox, red, blue: ", self.colorSensor.getProximity(), self.colorSensor.getRawColor().red, self.colorSensor.getRawColor().blue + 57)
 
    def getBallStatus(self):
       color = constants.NOBALL
-      if self.colorSensor.getProximity() > 190:
-         if self.colorSensor.getRawColor().red < self.colorSensor.getRawColor().blue:
+      if self.colorSensor.getProximity() > 230:
+         if self.colorSensor.getRawColor().red < self.colorSensor.getRawColor().blue + 57:
             color = constants.BLUE
          else:
             color = constants.RED

@@ -2,7 +2,7 @@ import math, ctre, wpilib
 from rev import RelativeEncoder
 from subsystems.drive import Drive
 from subsystems.shooter import Shooter
-from utils import math_functions, ID
+from utils import math_functions, ID, pid
 
 class Shoot:
    TURNING = 0
@@ -16,7 +16,7 @@ class Shoot:
    RELAXING = 8
    DEFAULT = -1
    state = TURNING
-   min_LimelightDistance = 15 #angle
+   min_LimelightDistance = 18 #angle
    max_LimelightDistance = 0 #angle
    flywheel_desiredSpeed = 0
 
@@ -24,6 +24,8 @@ class Shoot:
       self.drive = _drive
       self.shooter = _shooter
       self.target_angle = self.drive.getYaw() - 180
+      self.pidshoot = pid.PID()
+      self.pidshoot.set_pid(0.0002, 0.000005, 0.0002, 0)
 
    def turning(self, motor_power_multiplyer):
       if self.shooter.hasTarget():
@@ -44,9 +46,9 @@ class Shoot:
       delta_angle = self.shooter.getCameraInfo()[1] # get angle of target
       self.target_angle = self.drive.getYaw() - delta_angle
       if self.shooter.getCameraInfo()[2] > self.min_LimelightDistance:
-         power = .5
+         power = .2 #back up if too close
       if self.shooter.getCameraInfo()[2] < self.max_LimelightDistance:
-         power = -.5
+         power = -.5 #move forward if too far
       if not self.shooter.hasTarget():
          power = 0
          self.target_angle = self.drive.getYaw()
@@ -58,9 +60,11 @@ class Shoot:
       delta_angle = self.shooter.getCameraInfo()[1] # get angle of target
       self.target_angle = self.drive.getYaw() - delta_angle
       if ball == False:
-         self.target_angle -= 30 # shoot away from target
+         self.target_angle -= 22 # shoot away from target
       self.drive.absoluteDrive(0, 0, self.target_angle, motor_power_multiplyer)
       self.flywheel_desiredSpeed = math_functions.shootInterp(self.shooter.getCameraInfo()[2])
+      if ball == False:
+         return abs(delta_angle) > 22-2
       return (abs(delta_angle) < 2)
 
    def firing(self):
@@ -70,7 +74,8 @@ class Shoot:
    def spin_pid(self, debug):
       current_vel = self.shooter.shooterMotor.getSelectedSensorVelocity(0)
       delta = self.flywheel_desiredSpeed - current_vel
-      pwr = delta * 0.001
+      #pwr = delta * 0.001
+      pwr = self.pidshoot.shoot_pid(delta)
       if (pwr > 0.99):
          pwr = 0.99
       if (pwr < -0.5):
@@ -80,7 +85,7 @@ class Shoot:
       self.shooter.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr)
       if debug:
          print ("spin: ", current_vel, " ", self.flywheel_desiredSpeed, " ", delta)
-      return (abs(delta) < 600)
+      return (abs(delta) < self.flywheel_desiredSpeed/10) # within 10% of desired speed
 
    def shooting(self):
       #shoot ball
@@ -109,6 +114,7 @@ class Shoot:
          if button_pressed:
             if self.positioning(motor_power_multiplyer):
                self.state = self.SPINNING
+               self.pidshoot.integral = 0
                print ("state=spinning")
          else:
             self.state = self.IDLE

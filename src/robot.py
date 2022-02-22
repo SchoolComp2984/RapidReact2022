@@ -24,7 +24,7 @@ class MyRobot(wpilib.TimedRobot):
 
       self.pid = pid.PID()
       #Original PID constants: 0.4, 0.001, 2
-      self.pid.set_pid(0.01, 0.000025, 0.05, 0)
+      self.pid.set_pid(0.01, 0.0002, 0.05, 0)
 
       self.printTimer = wpilib.Timer()
       self.printTimer.start()
@@ -125,8 +125,8 @@ class MyRobot(wpilib.TimedRobot):
          self.battery_voltage = self.driver_station.getBatteryVoltage()
          self.motor_power_multiplyer = math_functions.clamp(self.battery_voltage - 9.5, 0, 1)
 
-         if self.printTimer.hasPeriodPassed(0.5):
-            print("mult= ", self.motor_power_multiplyer)
+         #if self.printTimer.hasPeriodPassed(0.5):
+            #print("mult= ", self.motor_power_multiplyer)
 
          #SHOOTER
          vel = 0
@@ -142,22 +142,27 @@ class MyRobot(wpilib.TimedRobot):
          elif (self.operator_controller.getRawButton(5)):
             vel = 5000 # too slow
          if (self.enable_shooter):
+            #if self._shoot.flywheel_desiredSpeed != vel:
+            #   self._shoot.pidshoot.integral = 0
+            #self._shoot.flywheel_desiredSpeed = vel
+            self._shoot.spin_pid(False)
             current_vel = self.shooterMotor.getSelectedSensorVelocity(0)
-            delta = vel-current_vel
-            pwr = delta * 0.001
-            if (pwr > 0.99):
-               pwr = 0.99
-            if (pwr < 0):
-               pwr = 0
-            if (vel == 0):
-               pwr = 0
+            #delta = vel-current_vel
+            #pwr = delta * 0.001
+            #if (pwr > 0.99):
+            #   pwr = 0.99
+            #if (pwr < 0):
+            #   pwr = 0
+            #if (vel == 0):
+            #   pwr = 0
             #self.shooterMotor.set(ctre.TalonFXControlMode.Velocity, vel/10.0)
-            self.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr)
+            #self.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr)
             #self.shooterMotor.set(ctre.ControlMode.Velocity, vel * self.COUNTS_PER_RAD / 10, ctre.DemandType.ArbitraryFeedForward, 2)
-            #if self.printTimer.hasPeriodPassed(0.5):
-               #print(pwr, " curr=",current_vel," set_vel=",vel)
+            if self.printTimer.hasPeriodPassed(0.5):
+               print(" curr=",current_vel," set_vel=",vel)
                #print(self.shooterMotor.getSelectedSensorVelocity(0))
-            
+
+         #self._shooter.printBallStatus() 
          #INTAKER
          if self.enable_intake:
             if self.operator_controller.getRawButton(6):

@@ -40,6 +40,9 @@ def shootInterp(limelight_angle):
       # shooting rpm for different distances
       # make this better
       array = [ \
-      [15,10000],\
-      [0,15000]]
+      [0,15000],\
+      [9.8,7700],\
+      [12.5,7500],\
+      [15,5000],\
+      [18,5000]]
       return interp_Array(limelight_angle, array)
