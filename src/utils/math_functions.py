@@ -46,3 +46,6 @@ def shootInterp(limelight_angle):
       [15,5000],\
       [18,5000]]
       return interp_Array(limelight_angle, array)
+
+def ez_quad_interp():
+      pass

@@ -1,5 +1,5 @@
 import wpilib, ctre, rev
-from commands import shoot
+from commands import shoot, intake
 from utils import ID, pid, math_functions, imutil, constants
 from subsystems import intaker, rotary_joystick, drive, shooter
 from networktables import NetworkTables
@@ -16,8 +16,7 @@ class MyRobot(wpilib.TimedRobot):
    def robotInit(self):
 
       #SUBSYSTEM ENABLERS
-      self.enable_intake = True
-      self.enable_color_sensor = False
+      self.enable_intake = False
       self.enable_driving = True
       self.enable_shooter =  True
       self.enable_shooter_test = True
@@ -85,7 +84,8 @@ class MyRobot(wpilib.TimedRobot):
          self.backLeft, 
          self.backRight, 
          self.frontLeft, 
-         self.frontRight
+         self.frontRight,
+         self.shooterMotor
       ]
 
       # Might change to XBOX controller depending on it working or not.
@@ -105,6 +105,13 @@ class MyRobot(wpilib.TimedRobot):
 
       #commands: These utilize subsystems to perform autonomous routines.
       self._shoot = shoot.Shoot(self._drive, self._shooter)
+      self._intake = intake.Intake(self._drive, self._intaker)
+
+   def autonomousInit(self) -> None:
+       pass
+
+   def autonomousPeriodic(self) -> None:
+       pass
 
    def teleopInit(self):
       print("Starting")
@@ -125,8 +132,8 @@ class MyRobot(wpilib.TimedRobot):
          self.battery_voltage = self.driver_station.getBatteryVoltage()
          self.motor_power_multiplyer = math_functions.clamp(self.battery_voltage - 9.5, 0, 1)
 
-         #if self.printTimer.hasPeriodPassed(0.5):
-            #print("mult= ", self.motor_power_multiplyer)
+         if self.printTimer.hasPeriodPassed(0.5):
+            print("intake camera coords: ", self._intaker.getCameraInfo())
 
          #SHOOTER
          vel = 0
@@ -170,23 +177,16 @@ class MyRobot(wpilib.TimedRobot):
             else:
                self._intaker.stop()
          
-         #COLOR SENSOR TESTING
-         #Nothing in front of sensor ~ 180, gets greater as object gets closer
-         #if self.enable_color_sensor:
-            #print(self._shooter.getBallStatus())
-
-         # print ("IMU= ", self.drive_imu.getYaw())
          #DRIVING
          if (self.enable_driving):
             self._shoot.auto_execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer)
             if self.operator_controller.getRawButton(7):
                # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
-               
                self.rotary_controller.reset_angle(self._shoot.target_angle)
             else:
                angle = self.rotary_controller.rotary_inputs()
-               speed_x = self.drive_controller.getRawAxis(0)
-               speed_y = self.drive_controller.getRawAxis(1)
+               speed_x = math_functions.interp(self.drive_controller.getRawAxis(0)) / 12
+               speed_y = math_functions.interp(self.drive_controller.getRawAxis(1)) / 12
                self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
                #self._drive.mecanumDrive(speed_y, -speed_x, angle)
          
