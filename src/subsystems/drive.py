@@ -52,8 +52,8 @@ class Drive:
         # finds angle difference (delta angle) in range -180 to 180
       delta_angle = desired_angle - cur_rotation
       delta_angle = ((delta_angle + 180) % 360) - 180
-        # PID steering power limited between -12 and 12
-      steer = max(-12, min(12, self.pid.steer_pid(delta_angle)))
+        # PID steering power limited between -1 and 1
+      steer = max(-1, min(1, self.pid.steer_pid(delta_angle)))
       left_speed = speed / 12
       right_speed = speed / 12
       left_speed -= steer / 12
@@ -63,10 +63,10 @@ class Drive:
       # Use PID or something in this next step idk
       #self.setSpeed(left_speed, right_speed)
       
-      self.frontLeft.set((-speed - leftright + steer) * mult)
-      self.frontRight.set((-speed + leftright - steer) * mult)
-      self.backLeft.set((-speed + leftright + steer) * mult)
-      self.backRight.set((-speed - leftright - steer) * mult)
+      self.frontLeft.set((speed - leftright + steer) * mult)
+      self.frontRight.set((speed + leftright - steer) * mult)
+      self.backLeft.set((speed + leftright + steer) * mult)
+      self.backRight.set((speed - leftright - steer) * mult)
 
    #Drive method for mecanum wheels
    def mecanumDrive(self, joy_y, joy_x, desired_angle):

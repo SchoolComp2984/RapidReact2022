@@ -11,6 +11,9 @@ def interp(joy):
       [.5,4],\
       [.85,6],\
       [1,12]]
+      return interp_Array(joy, ary)
+      
+def interp_Array(joy, ary):
       if joy <= ary[0][0]:
             return ary[0][1]
       if joy >= ary[len(ary) - 1][0]: 
@@ -37,6 +40,12 @@ def shootInterp(limelight_angle):
       # shooting rpm for different distances
       # make this better
       array = [ \
-      [18,5000],\
-      [3,20000]]
-      return 15000
+      [0,15000],\
+      [9.8,7700],\
+      [12.5,7500],\
+      [15,5000],\
+      [18,5000]]
+      return interp_Array(limelight_angle, array)
+
+def ez_quad_interp():
+      pass
