@@ -86,19 +86,13 @@ class Shoot:
       if debug:
          print ("spin: ", current_vel, " ", self.flywheel_desiredSpeed, " ", delta)
       return (abs(delta) < self.flywheel_desiredSpeed/10) # within 10% of desired speed
-
-   def shooting(self):
-      #shoot ball
-      pass
-   def discarding(self):
-      #get rid of wrong-color ball
-      pass
    
    def transporting(self, angle):
       self.shooter.transportServo.setAngle(angle)
 
    #always run this function in robot.py teleop
-   def auto_execute(self, button_pressed, motor_power_multiplyer):
+   def execute(self, button_pressed, motor_power_multiplyer):
+      retval = False # not taking control of drive motors
       self.spin_pid(False)
       self.flywheel_desiredSpeed = 0
       if self.state == self.IDLE:
@@ -108,10 +102,12 @@ class Shoot:
             self.shooter.printBallStatus()
             if (self.ball == True or self.ball == False) and self.shooter.hasTarget(): #if robot has ball and sees target
                self.state = self.POSITIONING
+               self.ball = True
                print ("state=positioning ", self.ball)
       elif self.state == self.POSITIONING:
          # roughly turn and move into min/max distance
          if button_pressed:
+            retval = True # controlling drive motors
             if self.positioning(motor_power_multiplyer):
                self.state = self.SPINNING
                self.pidshoot.integral = 0
@@ -121,6 +117,7 @@ class Shoot:
             print ("state=idle")
       elif self.state == self.SPINNING:
          if button_pressed:
+            retval = True # controlling drive motors
             if self.spinning(self.ball, motor_power_multiplyer) and self.spin_pid(True):
                self.state = self.FIRING
                print ("state=firing")
@@ -130,6 +127,7 @@ class Shoot:
             print ("state=idle")
       elif self.state == self.FIRING:
          if button_pressed:
+            retval = True # controlling drive motors
             self.spinning(self.ball, motor_power_multiplyer)
             self.shooter.transportServo.setAngle(ID.SERVO_MAX)
             if self.startServoTime + 0.4 < wpilib.Timer.getFPGATimestamp():
@@ -145,19 +143,4 @@ class Shoot:
       else:
          self.state = self.IDLE
          print ("state=idle")
-
-   def finish(self):
-      self.state = self.TURNING
-
-   def execute(self, state):
-      if self.state == self.TURNING:
-         self.turning()
-      if self.state == self.MOVING:
-         self.moving()
-      if self.state == self.SHOOTING: # if or elif
-         #Code for shoot the ball
-         self.shooting()
-         #if shooting is done:
-         self.finish()
-      if self.state == self.DISCARDING:
-         self.discarding()
+      return retval

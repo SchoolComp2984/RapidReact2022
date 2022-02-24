@@ -4,7 +4,7 @@ from networktables import NetworkTables
 #best power is somewhere between 3.2-3.9 v and 3.1-3.6 a
 class Intaker:
 
-   INTAKE_POWER = 3.4
+   INTAKE_POWER = 4
    
    def __init__(self, _lift_motor : WPI_TalonSRX, _spin_motor : WPI_TalonSRX) -> None:
       self.lift_motor = _lift_motor
@@ -24,7 +24,11 @@ class Intaker:
 
    def getCameraInfo(self):
       networkTableData = NetworkTables.getTable("SmartDashboard")
-      x = networkTableData.getNumber("intake-ball-offset-x", 0)
-      y = networkTableData.getNumber("intake-ball-offset-y", 0)
-      data = [x, y]
+      hasBall = networkTableData.getNumber("intake-ball", False)
+      x = networkTableData.getNumber("intake-ball-offset-x", 0) # -200 to 200 px
+      y = networkTableData.getNumber("intake-ball-offset-y", 0) # -150 to 150 px
+      data = [hasBall, x, y]
       return data
+
+   def hasTarget(self):
+      return self.networkTableData.getNumber("intake-ball")

@@ -1,7 +1,7 @@
 import wpilib, ctre, rev
 from commands import shoot, intake
 from utils import ID, pid, math_functions, imutil, constants
-from subsystems import intaker, rotary_joystick, drive, shooter
+from subsystems import intaker, rotary_joystick, drive, shooter, ball_sensor
 from networktables import NetworkTables
 import math
 
@@ -16,10 +16,14 @@ class MyRobot(wpilib.TimedRobot):
    def robotInit(self):
 
       #SUBSYSTEM ENABLERS
-      self.enable_intake = False
+      self.enable_intake_test = True
       self.enable_driving = True
-      self.enable_shooter =  True
-      self.enable_shooter_test = True
+      self.enable_shooter_test = False
+      # automated drive is used when the limelight and IMU are both working...
+      # ...if they are not working then we can default to a completely teleoperated drive
+      self.automated_drive = True
+      self.automated_intake = True
+      self.automated_shooting = True
 
       self.pid = pid.PID()
       #Original PID constants: 0.4, 0.001, 2
@@ -52,24 +56,23 @@ class MyRobot(wpilib.TimedRobot):
       self.shooterMotor = ctre.WPI_TalonFX(ID.SHOOTER)
       self.shooterServo = wpilib.Servo(ID.SHOOTER_SERVO)
 
-      if (self.enable_shooter):
-         self.shooter_control_mode = ctre.TalonFXControlMode(2) 
-         #self.shooterMotor.configSelectedFeedbackSensor(ctre.TalonFXFeedbackDevice.IntegratedSensor, 0, 10) # IntegratedSensor
-         self.shooterMotor.configNominalOutputForward(0.2,10)
-         self.shooterMotor.configNominalOutputReverse(0.1,10)
-         self.shooterMotor.configPeakOutputForward(0.99,10) # limit to 0.1x of the max power
-         self.shooterMotor.configPeakOutputReverse(0.5,10) # limit to 0.1x of the max power
-         limits = ctre.SupplyCurrentLimitConfiguration(True, 40, 40, 0)
-         self.shooterMotor.configSupplyCurrentLimit(limits, 10)
-         #self.shooterMotor.setNeutralMode(self.shooterMotor.NeutralMode.Coast)
-         self.shooterMotor.selectProfileSlot(0,0)
-         self.shooterMotor.config_kF(0, 0.3, 10)
-         self.shooterMotor.config_kP(0, 0.2, 10)
-         self.shooterMotor.config_kI(0, 0.0, 10)
-         self.shooterMotor.config_kD(0, 0.0, 10)
-         self.shooterMotor.configMotionAcceleration(15, 10)
-         self.shooterMotor.configMotionCruiseVelocity(200000,10)
-         #self.shooterMotor.configMotionAcceleration(20,10)
+      self.shooter_control_mode = ctre.TalonFXControlMode(2) 
+      #self.shooterMotor.configSelectedFeedbackSensor(ctre.TalonFXFeedbackDevice.IntegratedSensor, 0, 10) # IntegratedSensor
+      self.shooterMotor.configNominalOutputForward(0.2,10)
+      self.shooterMotor.configNominalOutputReverse(0.1,10)
+      self.shooterMotor.configPeakOutputForward(0.99,10) # limit to 0.1x of the max power
+      self.shooterMotor.configPeakOutputReverse(0.5,10) # limit to 0.1x of the max power
+      limits = ctre.SupplyCurrentLimitConfiguration(True, 40, 40, 0)
+      self.shooterMotor.configSupplyCurrentLimit(limits, 10)
+      #self.shooterMotor.setNeutralMode(self.shooterMotor.NeutralMode.Coast)
+      self.shooterMotor.selectProfileSlot(0,0)
+      self.shooterMotor.config_kF(0, 0.3, 10)
+      self.shooterMotor.config_kP(0, 0.2, 10)
+      self.shooterMotor.config_kI(0, 0.0, 10)
+      self.shooterMotor.config_kD(0, 0.0, 10)
+      self.shooterMotor.configMotionAcceleration(15, 10)
+      self.shooterMotor.configMotionCruiseVelocity(200000,10)
+      #self.shooterMotor.configMotionAcceleration(20,10)
 
       self.intakeSpin = ctre.WPI_TalonSRX(ID.INTAKE_SPIN)
       self.intakeLift = ctre.WPI_TalonSRX(ID.INTAKE_LIFT)
@@ -102,10 +105,11 @@ class MyRobot(wpilib.TimedRobot):
       self._drive = drive.Drive(self.frontLeft, self.backLeft, self.frontRight, self.backRight, self.drive_imu, self.pid)
       self._shooter = shooter.Shooter(self.shooterMotor, self.shooterServo, self.colorSensor, self.alliance_color)
       self._intaker = intaker.Intaker(self.intakeLift, self.intakeSpin)
+      self._ball_sensor = ball_sensor.BallSensor(self.colorSensor, self.alliance_color)
 
       #commands: These utilize subsystems to perform autonomous routines.
       self._shoot = shoot.Shoot(self._drive, self._shooter)
-      self._intake = intake.Intake(self._drive, self._intaker)
+      self._intake = intake.Intake(self._drive, self._intaker, self._ball_sensor)
 
    def autonomousInit(self) -> None:
        pass
@@ -135,20 +139,54 @@ class MyRobot(wpilib.TimedRobot):
          if self.printTimer.hasPeriodPassed(0.5):
             print("intake camera coords: ", self._intaker.getCameraInfo())
 
-         #SHOOTER
-         vel = 0
-         #self.shooterMotor.set(self.drive_controller.getRawAxis(1))
-         if (self.operator_controller.getRawButton(1)):
-            vel = 25000 # WAY TOO FAST
-         elif (self.operator_controller.getRawButton(2)):
-            vel = 20000 # maybe too fast
-         elif (self.operator_controller.getRawButton(3)):
-            vel = 15000 # speed for long distance
-         elif (self.operator_controller.getRawButton(4)):
-            vel = 10000 # speed for short distance
-         elif (self.operator_controller.getRawButton(5)):
-            vel = 5000 # too slow
-         if (self.enable_shooter):
+         #INTAKER
+         if self.enable_intake_test:
+            if self.operator_controller.getRawButton(6):
+               self._intaker.spin()
+            else:
+               self._intaker.stop()
+         
+         #DRIVING AND COOL STATE MACHINES
+         if (self.enable_driving):
+            if self._shoot.execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer):
+               # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
+               self.rotary_controller.reset_angle(self._shoot.target_angle)
+            # elif self.operator_controller.getRawButton(6):
+            #    if (self.automated_intake):
+            #       self._intake.execute(self.motor_power_multiplyer)
+            else:
+               if (self.automated_drive):
+                  angle = self.rotary_controller.rotary_inputs()
+                  speed_x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
+                  speed_y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.2)
+                  self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
+                  #self._drive.mecanumDrive(speed_y, -speed_x, angle)
+               else:
+                  y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.2)
+                  x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
+                  twist = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
+                  self._drive.arcadeDrive(y, x)
+               
+
+         
+         #SHOOTER TEST
+         if self.enable_shooter_test:
+            if self.operator_controller.getRawButton(8):
+               self._shoot.transporting(ID.SERVO_MIN)
+            if self.operator_controller.getRawButton(9):
+               self._shoot.transporting(ID.SERVO_MAX)
+               vel = 0
+            #self.shooterMotor.set(self.drive_controller.getRawAxis(1))
+            if (self.operator_controller.getRawButton(1)):
+               vel = 25000 # WAY TOO FAST
+            elif (self.operator_controller.getRawButton(2)):
+               vel = 20000 # maybe too fast
+            elif (self.operator_controller.getRawButton(3)):
+               vel = 15000 # speed for long distance
+            elif (self.operator_controller.getRawButton(4)):
+               vel = 10000 # speed for short distance
+            elif (self.operator_controller.getRawButton(5)):
+               vel = 5000 # too slow
             #if self._shoot.flywheel_desiredSpeed != vel:
             #   self._shoot.pidshoot.integral = 0
             #self._shoot.flywheel_desiredSpeed = vel
@@ -168,33 +206,6 @@ class MyRobot(wpilib.TimedRobot):
             if self.printTimer.hasPeriodPassed(0.5):
                print(" curr=",current_vel," set_vel=",vel)
                #print(self.shooterMotor.getSelectedSensorVelocity(0))
-
-         #self._shooter.printBallStatus() 
-         #INTAKER
-         if self.enable_intake:
-            if self.operator_controller.getRawButton(6):
-               self._intaker.spin()
-            else:
-               self._intaker.stop()
-         
-         #DRIVING
-         if (self.enable_driving):
-            self._shoot.auto_execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer)
-            if self.operator_controller.getRawButton(7):
-               # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
-               self.rotary_controller.reset_angle(self._shoot.target_angle)
-            else:
-               angle = self.rotary_controller.rotary_inputs()
-               speed_x = math_functions.interp(self.drive_controller.getRawAxis(0)) / 12
-               speed_y = math_functions.interp(self.drive_controller.getRawAxis(1)) / 12
-               self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
-               #self._drive.mecanumDrive(speed_y, -speed_x, angle)
-         
-         if self.enable_shooter_test:
-            if self.operator_controller.getRawButton(8):
-               self._shoot.transporting(ID.SERVO_MIN)
-            if self.operator_controller.getRawButton(9):
-               self._shoot.transporting(ID.SERVO_MAX)
       except:
          raise
 

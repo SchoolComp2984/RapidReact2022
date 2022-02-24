@@ -6,7 +6,6 @@ DRIVE_RIGHT_BACK = 2
 DRIVE_LEFT_FRONT = 4
 DRIVE_LEFT_BACK = 1
 
-#This number is not known yet
 SHOOTER = 0
 INTAKE_SPIN = 6
 INTAKE_LIFT = 5
