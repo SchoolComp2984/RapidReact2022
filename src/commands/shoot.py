@@ -102,7 +102,6 @@ class Shoot:
             self.shooter.printBallStatus()
             if (self.ball == True or self.ball == False) and self.shooter.hasTarget(): #if robot has ball and sees target
                self.state = self.POSITIONING
-               self.ball = True
                print ("state=positioning ", self.ball)
       elif self.state == self.POSITIONING:
          # roughly turn and move into min/max distance

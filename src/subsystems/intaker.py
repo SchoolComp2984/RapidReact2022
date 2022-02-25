@@ -4,7 +4,7 @@ from networktables import NetworkTables
 #best power is somewhere between 3.2-3.9 v and 3.1-3.6 a
 class Intaker:
 
-   INTAKE_POWER = 4
+   INTAKE_POWER = 2.6
    
    def __init__(self, _lift_motor : WPI_TalonSRX, _spin_motor : WPI_TalonSRX) -> None:
       self.lift_motor = _lift_motor

@@ -59,7 +59,7 @@ def good_joystick_interp(joy_value, deadzone):
     #deadzone 0 to 1
     new_value = 0
     if abs(joy_value) > deadzone:
-        new_value = good_interp(3, deadzone, 1, 0, 1, abs(joy_value))
+        new_value = good_interp(2, deadzone, 1, 0, 1, abs(joy_value))
         if joy_value < 0:
             new_value *= -1
         else:

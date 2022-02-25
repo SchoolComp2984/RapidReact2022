@@ -4,7 +4,7 @@ from utils import pid, imutil
 
 # parameter : type
 class Drive:
-   #CONTRUCTOR
+   #CONSTRUCTOR
    def __init__(self, _frontLeft : WPI_TalonFX, _backLeft : WPI_TalonFX, _frontRight : WPI_TalonFX, _backRight : WPI_TalonFX, _drive_imu : imutil, _pid : pid):
       self.frontLeft = _frontLeft
       self.backLeft = _backLeft
@@ -36,10 +36,12 @@ class Drive:
       return self.drive_imu.getYaw()
 
    #DRIVE FUNCTIONS
-   def arcadeDrive(self, y, x):
-      left_speed = y + x
-      right_speed = y - x
-      self.setSpeed(left_speed, right_speed)
+   def arcadeDrive(self, y, x, mult):
+
+      self.frontLeft.set((y - x) * mult)
+      self.frontRight.set((y + x) * mult)
+      self.backLeft.set((y - x) * mult)
+      self.backRight.set((y + x) * mult)
 
    def TankDrive(self, right_y, left_y):
       left_speed = left_y
@@ -54,14 +56,6 @@ class Drive:
       delta_angle = ((delta_angle + 180) % 360) - 180
         # PID steering power limited between -1 and 1
       steer = max(-1, min(1, self.pid.steer_pid(delta_angle)))
-      left_speed = speed / 12
-      right_speed = speed / 12
-      left_speed -= steer / 12
-      right_speed += steer / 12
-        #self._drive.DifferentialDrive(left, right)
-      # self._drive.arcadeDrive(left,steer)
-      # Use PID or something in this next step idk
-      #self.setSpeed(left_speed, right_speed)
       
       self.frontLeft.set((speed - leftright + steer) * mult)
       self.frontRight.set((speed + leftright - steer) * mult)

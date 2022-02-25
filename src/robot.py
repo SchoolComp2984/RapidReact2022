@@ -13,17 +13,24 @@ class MyRobot(wpilib.TimedRobot):
    COUNTS_PER_RAD = 2048 / (2 * 3.14159)
    RADS_PER_COUNT = 2 * 3.14159 / 2048
 
+   SHOOTING = 0
+   INTAKING = 1
+   DRIVING = 2
+
+   state = DRIVING
+
    def robotInit(self):
 
       #SUBSYSTEM ENABLERS
       self.enable_intake_test = True
       self.enable_driving = True
       self.enable_shooter_test = False
+
       # automated drive is used when the limelight and IMU are both working...
       # ...if they are not working then we can default to a completely teleoperated drive
       self.automated_drive = True
       self.automated_intake = True
-      self.automated_shooting = True
+      self.automated_shooter = True
 
       self.pid = pid.PID()
       #Original PID constants: 0.4, 0.001, 2
@@ -146,28 +153,48 @@ class MyRobot(wpilib.TimedRobot):
             else:
                self._intaker.stop()
          
+         if self.operator_controller.getRawButton(6):
+            self.state = self.SHOOTING
+         elif self.operator_controller.getRawButton(7):
+            self.state = self.INTAKING
+         else:
+            self.state = self.DRIVING
+
+         if self.state == self.SHOOTING:
+            if (self.automated_shooter):
+               pass
+            else:
+               pass
+         elif self.state == self.INTAKING:
+            if (self.automated_intake):
+               pass
+            else:
+               pass 
+         elif self.state == self.DRIVING:
+            if (self.automated_drive):
+               pass
+            else:
+               pass
+
          #DRIVING AND COOL STATE MACHINES
          if (self.enable_driving):
-            if self._shoot.execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer):
-               # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
-               self.rotary_controller.reset_angle(self._shoot.target_angle)
-            # elif self.operator_controller.getRawButton(6):
-            #    if (self.automated_intake):
-            #       self._intake.execute(self.motor_power_multiplyer)
+            # if self._shoot.execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer):
+            #    # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
+            #    self.rotary_controller.reset_angle(self.drive_imu.getYaw())
+            # # elif self.operator_controller.getRawButton(6):
+            # #    if (self.automated_intake):
+            # #       self._intake.execute(self.motor_power_multiplyer)
+            # else:
+            if (self.automated_drive):
+               angle = self.rotary_controller.rotary_inputs()
+               speed_x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.1)
+               speed_y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
+               self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
             else:
-               if (self.automated_drive):
-                  angle = self.rotary_controller.rotary_inputs()
-                  speed_x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
-                  speed_y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.2)
-                  self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
-                  #self._drive.mecanumDrive(speed_y, -speed_x, angle)
-               else:
-                  y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.2)
-                  x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
-                  twist = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
-                  self._drive.arcadeDrive(y, x)
-               
-
+               y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
+               x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.1)
+               # twist = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
+               self._drive.arcadeDrive(y, x, self.motor_power_multiplyer)
          
          #SHOOTER TEST
          if self.enable_shooter_test:
