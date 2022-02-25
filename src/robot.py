@@ -13,12 +13,6 @@ class MyRobot(wpilib.TimedRobot):
    COUNTS_PER_RAD = 2048 / (2 * 3.14159)
    RADS_PER_COUNT = 2 * 3.14159 / 2048
 
-   SHOOTING = 0
-   INTAKING = 1
-   DRIVING = 2
-
-   state = DRIVING
-
    def robotInit(self):
 
       #SUBSYSTEM ENABLERS
@@ -29,7 +23,7 @@ class MyRobot(wpilib.TimedRobot):
       # automated drive is used when the limelight and IMU are both working...
       # ...if they are not working then we can default to a completely teleoperated drive
       self.automated_drive = True
-      self.automated_intake = True
+      self.automated_intake = False
       self.automated_shooter = True
 
       self.pid = pid.PID()
@@ -152,57 +146,29 @@ class MyRobot(wpilib.TimedRobot):
                self._intaker.spin()
             else:
                self._intaker.stop()
-         
-         if self.operator_controller.getRawButton(6):
-            self.state = self.SHOOTING
-         elif self.operator_controller.getRawButton(7):
-            self.state = self.INTAKING
-         else:
-            self.state = self.DRIVING
-
-         if self.state == self.SHOOTING:
-            if (self.automated_shooter):
-               pass
-            else:
-               pass
-         elif self.state == self.INTAKING:
-            if (self.automated_intake):
-               pass
-            else:
-               pass 
-         elif self.state == self.DRIVING:
-            if (self.automated_drive):
-               pass
-            else:
-               pass
 
          #DRIVING AND COOL STATE MACHINES
          if (self.enable_driving):
-            # if self._shoot.execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer):
-            #    # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
-            #    self.rotary_controller.reset_angle(self.drive_imu.getYaw())
-            # # elif self.operator_controller.getRawButton(6):
-            # #    if (self.automated_intake):
-            # #       self._intake.execute(self.motor_power_multiplyer)
-            # else:
-            if (self.automated_drive):
-               angle = self.rotary_controller.rotary_inputs()
-               speed_x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.1)
-               speed_y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
-               self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
+            if self._shoot.execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer):
+               # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
+               self.rotary_controller.reset_angle(self.drive_imu.getYaw())
+            elif self.operator_controller.getRawButton(6):
+               pass
+               # self._intake.execute(self.motor_power_multiplyer)
             else:
-               y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
-               x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.1)
-               # twist = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
-               self._drive.arcadeDrive(y, x, self.motor_power_multiplyer)
+               if (self.automated_drive):
+                  self.automatedDrive()
+               else:
+                  self.manualDrive()
          
+         if not self.automated_intake:
+            self.manualIntake()
+
+         if not self.automated_shooter:
+            self.manualShooter()
+
          #SHOOTER TEST
          if self.enable_shooter_test:
-            if self.operator_controller.getRawButton(8):
-               self._shoot.transporting(ID.SERVO_MIN)
-            if self.operator_controller.getRawButton(9):
-               self._shoot.transporting(ID.SERVO_MAX)
-               vel = 0
             #self.shooterMotor.set(self.drive_controller.getRawAxis(1))
             if (self.operator_controller.getRawButton(1)):
                vel = 25000 # WAY TOO FAST
@@ -236,6 +202,39 @@ class MyRobot(wpilib.TimedRobot):
       except:
          raise
 
+   def automatedDrive(self):
+      angle = self.rotary_controller.rotary_inputs()
+      speed_x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.1)
+      speed_y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
+      self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
+   
+   def manualDrive(self):
+      y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
+      x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.1)
+      # twist = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
+      self._drive.arcadeDrive(y, x, self.motor_power_multiplyer)
+
+   def automatedIntake(self):
+      if self.operator_controller.getRawButton(6):
+         self._intake.execute(self.motor_power_multiplyer)
+
+   def manualIntake(self):
+      if self.operator_controller.getRawButton(6):
+         self._intaker.spin()
+      else:
+         self._intaker.stop()
+      # STILL NEED TO CODE LIFTING AND LOWERING INTAKE INTO THIS
+
+   def manualShooter(self):
+      if self.operator_controller.getRawButton(7):
+         self._shooter.setSpeed(0.6)
+      if self.operator_controller.getRawButton(8):
+         self._shoot.transporting(ID.SERVO_MIN)
+      if self.operator_controller.getRawButton(9):
+         self._shoot.transporting(ID.SERVO_MAX)
+
+   def automatedShooter(self):
+      pass
 
 if __name__ == "__main__":
    wpilib.run(MyRobot)
