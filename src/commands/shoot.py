@@ -91,7 +91,10 @@ class Shoot:
       self.shooter.transportServo.setAngle(angle)
 
    #always run this function in robot.py teleop
-   def execute(self, button_pressed, motor_power_multiplyer):
+   # MSG FOR KYLE: USE THE VALUES PASSED INTO THIS FUNCTION TO DISABLE CERTAIN PARTS OF THE STATE MACHINE 
+   # TO NOT HAVE CONFLICT WITH THE MANUAL BUTTON PRESSES; MANUAL BUTTON PRESSES OVERRIDE AUTONOMOUS STATE
+   # MACHINE FUNCTIONS
+   def execute(self, button_pressed, manual_transport_enabled, manual_shooter_enabled, motor_power_multiplyer):
       retval = False # not taking control of drive motors
       self.spin_pid(False)
       self.flywheel_desiredSpeed = 0

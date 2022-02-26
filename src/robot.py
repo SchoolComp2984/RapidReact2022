@@ -23,8 +23,6 @@ class MyRobot(wpilib.TimedRobot):
       # automated drive is used when the limelight and IMU are both working...
       # ...if they are not working then we can default to a completely teleoperated drive
       self.automated_drive = True
-      self.automated_intake = False
-      self.automated_shooter = True
 
       self.pid = pid.PID()
       #Original PID constants: 0.4, 0.001, 2
@@ -134,6 +132,16 @@ class MyRobot(wpilib.TimedRobot):
       
    def teleopPeriodic(self):
       try:
+         auto_shoot_button = self.operator_controller.getRawButton(7)
+         manual_transport_button = self.operator_controller.getRawButton(8)
+         manual_shoot_button = self.operator_controller.getRawButton(5)
+
+         auto_intake_button = self.operator_controller.getRawButton(6)
+         manual_intake_spin = self.operator_controller.getRawButton(10)
+         manual_intake_spin_reverse = self.operator_controller.getRawButton(11)
+         manual_intake_spin_toggle = self.operator_controller.getRawButton(9)
+
+
          self.battery_voltage = self.driver_station.getBatteryVoltage()
          self.motor_power_multiplyer = math_functions.clamp(self.battery_voltage - 9.5, 0, 1)
 
@@ -149,23 +157,23 @@ class MyRobot(wpilib.TimedRobot):
 
          #DRIVING AND COOL STATE MACHINES
          if (self.enable_driving):
-            if self._shoot.execute(self.operator_controller.getRawButton(7), self.motor_power_multiplyer):
+            if self._shoot.execute(auto_shoot_button, manual_transport_button, manual_shoot_button, self.motor_power_multiplyer):
                # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
                self.rotary_controller.reset_angle(self.drive_imu.getYaw())
-            elif self.operator_controller.getRawButton(6):
-               pass
-               # self._intake.execute(self.motor_power_multiplyer)
+            elif auto_intake_button:
+               if (manual_intake_spin or manual_intake_spin_reverse or manual_intake_spin_toggle):
+                  manual_intake = True
+               self._intake.execute(self.motor_power_multiplyer)
+               self.rotary_controller.reset_angle(self.drive_imu.getYaw())
             else:
                if (self.automated_drive):
                   self.automatedDrive()
                else:
                   self.manualDrive()
-         
-         if not self.automated_intake:
-            self.manualIntake()
 
-         if not self.automated_shooter:
-            self.manualShooter()
+            self.manualShooter(manual_shoot_button, manual_transport_button)
+            self.manualIntake(manual_intake_spin_toggle, manual_intake_spin, manual_intake_spin_reverse)
+
 
          #SHOOTER TEST
          if self.enable_shooter_test:
@@ -214,27 +222,23 @@ class MyRobot(wpilib.TimedRobot):
       # twist = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
       self._drive.arcadeDrive(y, x, self.motor_power_multiplyer)
 
-   def automatedIntake(self):
-      if self.operator_controller.getRawButton(6):
-         self._intake.execute(self.motor_power_multiplyer)
-
-   def manualIntake(self):
-      if self.operator_controller.getRawButton(6):
-         self._intaker.spin()
+   def manualIntake(self, toggle, spin, reverse):
+      if reverse:
+         self._intaker.spin(-1)
+      elif spin or toggle:
+         self._intaker.spin(1)
       else:
          self._intaker.stop()
       # STILL NEED TO CODE LIFTING AND LOWERING INTAKE INTO THIS
 
-   def manualShooter(self):
-      if self.operator_controller.getRawButton(7):
+   def manualShooter(self, shoot, transport):
+      if shoot:
          self._shooter.setSpeed(0.6)
-      if self.operator_controller.getRawButton(8):
-         self._shoot.transporting(ID.SERVO_MIN)
-      if self.operator_controller.getRawButton(9):
-         self._shoot.transporting(ID.SERVO_MAX)
+      if transport:
+         self._shooter.transportUp()
+      else:
+         self._shooter.transportDown()
 
-   def automatedShooter(self):
-      pass
 
 if __name__ == "__main__":
    wpilib.run(MyRobot)

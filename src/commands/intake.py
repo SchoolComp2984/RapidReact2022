@@ -9,7 +9,6 @@ class Intake:
    IDLE = 0
    TURNING = 1
    MOVING = 2
-   CONSUMING = 3
 
    state = TURNING
 
@@ -46,11 +45,6 @@ class Intake:
          self.drive.absoluteDrive(power, 0, self.target_angle, motor_power_mult)
          if self.intaker.getCameraInfo()[2] < -120 and self.intaker.getCameraInfo()[2] > -150:
             self.startSpinTime = wpilib.Timer.getFPGATimestamp()
-            self.STATE = self.CONSUMING
-      elif self.STATE == self.CONSUMING:
-         self.intaker.spin()
-         if self.startSpinTime + 1 < wpilib.Timer.getFPGATimestamp():
-            self.intaker.stop()
             self.STATE = self.IDLE
       else:
          pass

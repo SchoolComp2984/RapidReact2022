@@ -2,7 +2,7 @@ from ctre import WPI_TalonFX
 from wpilib import Servo
 from rev import ColorSensorV3
 from networktables import NetworkTables
-from utils import constants
+from utils import constants, ID
 
 class Shooter:
    def __init__(self, _shooterMotor : WPI_TalonFX, _transportServo : Servo, _colorSensor : ColorSensorV3, _alliance_color : int):
@@ -43,6 +43,12 @@ class Shooter:
    
    def transportBall(self):
       self.transportServo.setAngle(180)
+
+   def transportUp(self):
+      self.transportServo.setAngle(ID.SERVO_MAX)
+      
+   def transportDown(self):
+      self.transportServo.setAngle(ID.SERVO_MIN)
    
    def hasTarget(self):
       target = self.getCameraInfo()[0]

@@ -37,7 +37,6 @@ class Drive:
 
    #DRIVE FUNCTIONS
    def arcadeDrive(self, y, x, mult):
-
       self.frontLeft.set((y - x) * mult)
       self.frontRight.set((y + x) * mult)
       self.backLeft.set((y - x) * mult)
