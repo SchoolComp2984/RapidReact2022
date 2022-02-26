@@ -5,17 +5,12 @@ from subsystems.shooter import Shooter
 from utils import math_functions, ID, pid
 
 class Shoot:
-   TURNING = 0
-   MOVING = 1
-   SHOOTING = 2
-   DISCARDING = 3
-   IDLE = 4
-   POSITIONING = 5
-   SPINNING = 6
-   FIRING = 7
-   RELAXING = 8
-   DEFAULT = -1
-   state = TURNING
+   IDLE = 0
+   POSITIONING = 1
+   SPINNING = 2
+   FIRING = 3
+   RELAXING = 4
+   state = IDLE
    min_LimelightDistance = 18 #angle
    max_LimelightDistance = 0 #angle
    flywheel_desiredSpeed = 0
@@ -26,20 +21,6 @@ class Shoot:
       self.target_angle = self.drive.getYaw() - 180
       self.pidshoot = pid.PID()
       self.pidshoot.set_pid(0.0002, 0.000005, 0.0002, 0)
-
-   def turning(self, motor_power_multiplyer):
-      if self.shooter.hasTarget():
-         delta_angle = self.shooter.getCameraInfo()[1] # get angle of target
-         self.target_angle = self.drive.getYaw() - delta_angle
-         if abs(delta_angle) < 2: # if aim is accurate enough
-            self.state = self.MOVING # set state to shooting
-      self.drive.absoluteDrive(0, 0, self.target_angle, motor_power_multiplyer)
-
-   def moving(self):
-      if self.ball_color == self.alliance_color:
-         self.state = self.SHOOTING
-      else:
-         self.state = self.DISCARDING
 
    def positioning(self, motor_power_multiplyer):
       power = 0
@@ -93,13 +74,20 @@ class Shoot:
    #always run this function in robot.py teleop
    # MSG FOR KYLE: USE THE VALUES PASSED INTO THIS FUNCTION TO DISABLE CERTAIN PARTS OF THE STATE MACHINE 
    # TO NOT HAVE CONFLICT WITH THE MANUAL BUTTON PRESSES; MANUAL BUTTON PRESSES OVERRIDE AUTONOMOUS STATE
+   # KYLE-I CODED IT BUT DID NOT TEST IT. I ALSO CLEANED UP THIS FILE A LITTLE MORE
    # MACHINE FUNCTIONS
    def execute(self, button_pressed, manual_transport_enabled, manual_shooter_enabled, motor_power_multiplyer):
       retval = False # not taking control of drive motors
       self.spin_pid(False)
-      self.flywheel_desiredSpeed = 0
+      if manual_shooter_enabled:
+         self.flywheel_desiredSpeed = 7500
+      else:
+         self.flywheel_desiredSpeed = 0
       if self.state == self.IDLE:
-         self.shooter.transportServo.setAngle(ID.SERVO_MIN)
+         if manual_transport_enabled:
+            self.transporting(ID.SERVO_MAX)
+         else:
+            self.transporting(ID.SERVO_MIN)
          if button_pressed:
             self.ball = self.shooter.getBallStatus()
             self.shooter.printBallStatus()
@@ -131,14 +119,14 @@ class Shoot:
          if button_pressed:
             retval = True # controlling drive motors
             self.spinning(self.ball, motor_power_multiplyer)
-            self.shooter.transportServo.setAngle(ID.SERVO_MAX)
+            self.transporting(ID.SERVO_MAX)
             if self.startServoTime + 0.4 < wpilib.Timer.getFPGATimestamp():
                self.state = self.RELAXING
                print ("state=relaxing")
          else:
             self.state = self.RELAXING
       elif self.state == self.RELAXING:
-         self.shooter.transportServo.setAngle(ID.SERVO_MIN)
+         self.transporting(ID.SERVO_MIN)
          if self.startServoTime + 0.8 < wpilib.Timer.getFPGATimestamp():
             self.state = self.IDLE
             print ("state=idle")
