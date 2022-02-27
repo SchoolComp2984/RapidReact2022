@@ -10,7 +10,7 @@ class Intake:
    TURNING = 1
    MOVING = 2
 
-   state = TURNING
+   STATE = TURNING
 
    minBallDistance = -150
    maxBallDistance = -100

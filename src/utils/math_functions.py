@@ -30,7 +30,7 @@ def shootInterp(limelight_angle):
        [0,15000],\
        [9.8,7700],\
        [12.5,7500],\
-       [15,5000],\
+       [15,5500],\
        [18,5000]]
        return interp_Array(limelight_angle, array)
 

@@ -6,7 +6,8 @@ from utils import math_functions
 #best power is somewhere between 3.2-3.9 v and 3.1-3.6 a
 class Intaker:
 
-   INTAKE_POWER = 3.4
+   #Big wheels
+   INTAKE_POWER = 20
    
    def __init__(self, _lift_motor : WPI_TalonSRX, _spin_motor : WPI_TalonSRX) -> None:
       self.lift_motor = _lift_motor
@@ -19,11 +20,16 @@ class Intaker:
    def stop(self):
       self.spin_motor.set(0)
 
+   #small wheels backwards
    def lower(self):
-      pass
+      self.lift_motor.set(-2)
 
+   #small wheels main
    def _raise(self):
-      pass
+      self.lift_motor.set(2)
+
+   def stop_lift(self):
+      self.lift_motor.set(0)
 
    def getCameraInfo(self):
       networkTableData = NetworkTables.getTable("SmartDashboard")

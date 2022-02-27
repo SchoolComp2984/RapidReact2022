@@ -75,7 +75,6 @@ class MyRobot(wpilib.TimedRobot):
 
       self.intakeSpin = ctre.WPI_TalonSRX(ID.INTAKE_SPIN)
       self.intakeLift = ctre.WPI_TalonSRX(ID.INTAKE_LIFT)
-
       self.drive_imu = imutil.Imutil(self.intakeSpin)
 
       self.colorSensor = rev.ColorSensorV3(wpilib.I2C.Port(0))
@@ -110,8 +109,9 @@ class MyRobot(wpilib.TimedRobot):
       self._shoot = shoot.Shoot(self._drive, self._shooter)
       self._intake = intake.Intake(self._drive, self._intaker, self._ball_sensor)
 
+      
    def autonomousInit(self) -> None:
-       pass
+       self.autoState = self.SHOOT
 
    def autonomousPeriodic(self) -> None:
        pass
@@ -140,27 +140,23 @@ class MyRobot(wpilib.TimedRobot):
          manual_intake_spin = self.operator_controller.getRawButton(10)
          manual_intake_spin_reverse = self.operator_controller.getRawButton(11)
          manual_intake_spin_toggle = self.operator_controller.getRawButton(9)
+         manual_intake_raise = self.operator_controller.getRawButton(2)
+         manual_intake_lower = self.operator_controller.getRawButton(3)
+
 
 
          self.battery_voltage = self.driver_station.getBatteryVoltage()
          self.motor_power_multiplyer = math_functions.clamp(self.battery_voltage - 9.5, 0, 1)
 
-         if self.printTimer.hasPeriodPassed(0.5):
-            print("intake camera coords: ", self._intaker.getCameraInfo())
-
-         #INTAKER
-         if self.enable_intake_test:
-            if self.operator_controller.getRawButton(6):
-               self._intaker.spin()
-            else:
-               self._intaker.stop()
+         #if self.printTimer.hasPeriodPassed(0.5):
+         #   print("intake camera coords: ", self._intaker.getCameraInfo())
 
          #DRIVING AND COOL STATE MACHINES
          if (self.enable_driving):
             if self._shoot.execute(auto_shoot_button, manual_transport_button, manual_shoot_button, self.motor_power_multiplyer):
                # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
                self.rotary_controller.reset_angle(self.drive_imu.getYaw())
-            elif auto_intake_button:
+            elif False:
                if (manual_intake_spin or manual_intake_spin_reverse or manual_intake_spin_toggle):
                   manual_intake = True
                self._intake.execute(self.motor_power_multiplyer)
@@ -172,7 +168,7 @@ class MyRobot(wpilib.TimedRobot):
                   self.manualDrive()
 
             self.manualShooter(manual_shoot_button, manual_transport_button)
-            self.manualIntake(manual_intake_spin_toggle, manual_intake_spin, manual_intake_spin_reverse)
+            self.manualIntake(manual_intake_spin_toggle, manual_intake_spin, manual_intake_spin_reverse, manual_intake_raise, manual_intake_lower)
 
 
          #SHOOTER TEST
@@ -215,6 +211,8 @@ class MyRobot(wpilib.TimedRobot):
       speed_x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.1)
       speed_y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
       self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
+
+     
    
    def manualDrive(self):
       y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
@@ -222,22 +220,30 @@ class MyRobot(wpilib.TimedRobot):
       # twist = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
       self._drive.arcadeDrive(y, x, self.motor_power_multiplyer)
 
-   def manualIntake(self, toggle, spin, reverse):
+   def manualIntake(self, toggle, spin, reverse, _raise, lower):
       if reverse:
          self._intaker.spin(-1)
       elif spin or toggle:
          self._intaker.spin(1)
       else:
          self._intaker.stop()
-      # STILL NEED TO CODE LIFTING AND LOWERING INTAKE INTO THIS
+      # CONFIG LIMIT SWITCHES IN PHOENIX TUNER BEFORE USING THIS CODE ALSO CHECK IF NORMALLY CLOSED OR OPEN
+      # if self.intakeSpin.isFwdLimitSwitchClosed() and self.intakeSpin.isRevLimitSwitchClosed():
+      if _raise:
+         self._intaker._raise()
+      elif lower:
+         self._intaker.lower()
+      else:
+         self._intaker.stop_lift()
+
 
    def manualShooter(self, shoot, transport):
       if shoot:
          self._shooter.setSpeed(0.6)
-      if transport:
-         self._shooter.transportUp()
-      else:
-         self._shooter.transportDown()
+      # if transport:
+      #    self._shooter.transportUp()
+      # else:
+      #    self._shooter.transportDown()
 
 
 if __name__ == "__main__":

@@ -42,7 +42,12 @@ class Shoot:
       self.target_angle = self.drive.getYaw() - delta_angle
       if ball == False:
          self.target_angle -= 22 # shoot away from target
-      self.drive.absoluteDrive(0, 0, self.target_angle, motor_power_multiplyer)
+      if self.shooter.getCameraInfo()[2] < 10:
+         forwards = -.2
+         print ("Forwards state= ", self.state, motor_power_multiplyer)
+      else:
+         forwards = 0
+      self.drive.absoluteDrive(forwards, 0, self.target_angle, motor_power_multiplyer)
       self.flywheel_desiredSpeed = math_functions.shootInterp(self.shooter.getCameraInfo()[2])
       if ball == False:
          return abs(delta_angle) > 22-2
@@ -52,7 +57,7 @@ class Shoot:
       self.flywheel_desiredSpeed = math_functions.shootInterp(self.shooter.getCameraInfo()[2])
       self.shooter.transportServo.setAngle(180)
 
-   def spin_pid(self, debug):
+   def spin_pid(self, debug, motor_power_multiplier):
       current_vel = self.shooter.shooterMotor.getSelectedSensorVelocity(0)
       delta = self.flywheel_desiredSpeed - current_vel
       #pwr = delta * 0.001
@@ -63,7 +68,7 @@ class Shoot:
          pwr = -0.5
       if (self.flywheel_desiredSpeed == 0):
          pwr = 0
-      self.shooter.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr)
+      self.shooter.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr * motor_power_multiplier)
       if debug:
          print ("spin: ", current_vel, " ", self.flywheel_desiredSpeed, " ", delta)
       return (abs(delta) < self.flywheel_desiredSpeed/10) # within 10% of desired speed
@@ -78,7 +83,7 @@ class Shoot:
    # MACHINE FUNCTIONS
    def execute(self, button_pressed, manual_transport_enabled, manual_shooter_enabled, motor_power_multiplyer):
       retval = False # not taking control of drive motors
-      self.spin_pid(False)
+      self.spin_pid(False, motor_power_multiplyer)
       if manual_shooter_enabled:
          self.flywheel_desiredSpeed = 7500
       else:
@@ -90,7 +95,7 @@ class Shoot:
             self.transporting(ID.SERVO_MIN)
          if button_pressed:
             self.ball = self.shooter.getBallStatus()
-            self.shooter.printBallStatus()
+            #self.shooter.printBallStatus()
             if (self.ball == True or self.ball == False) and self.shooter.hasTarget(): #if robot has ball and sees target
                self.state = self.POSITIONING
                print ("state=positioning ", self.ball)
@@ -98,6 +103,7 @@ class Shoot:
          # roughly turn and move into min/max distance
          if button_pressed:
             retval = True # controlling drive motors
+            self.flywheel_desiredSpeed = math_functions.shootInterp(self.shooter.getCameraInfo()[2])
             if self.positioning(motor_power_multiplyer):
                self.state = self.SPINNING
                self.pidshoot.integral = 0
@@ -108,7 +114,7 @@ class Shoot:
       elif self.state == self.SPINNING:
          if button_pressed:
             retval = True # controlling drive motors
-            if self.spinning(self.ball, motor_power_multiplyer) and self.spin_pid(True):
+            if self.spinning(self.ball, motor_power_multiplyer) and self.spin_pid(True, motor_power_multiplyer):
                self.state = self.FIRING
                print ("state=firing")
                self.startServoTime = wpilib.Timer.getFPGATimestamp()
