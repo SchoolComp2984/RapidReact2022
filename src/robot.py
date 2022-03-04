@@ -73,6 +73,7 @@ class MyRobot(wpilib.TimedRobot):
 
       self.intakeSpin = ctre.WPI_TalonSRX(ID.INTAKE_SPIN)
       self.intakeLift = ctre.WPI_TalonSRX(ID.INTAKE_LIFT)
+      self.intakeUpperSpin = rev.CANSparkMax(ID.INTAKE_UPPER, rev.MotorType.kBrushless)
       self.drive_imu = imutil.Imutil(self.intakeSpin)
 
       self.colorSensor = rev.ColorSensorV3(wpilib.I2C.Port(0))
@@ -87,10 +88,19 @@ class MyRobot(wpilib.TimedRobot):
          self.shooterMotor
       ]
 
-      # Might change to XBOX controller depending on it working or not.
       # while rotary_joystick.RotaryJoystick(ID.DRIVE_CONTROLLER).getRawButton(12) or not rotary_joystick.RotaryJoystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
       #    ID.OPERATOR_CONTROLLER = 1 - ID.OPERATOR_CONTROLLER 
       #    ID.DRIVE_CONTROLLER = 1 - ID.DRIVE_CONTROLLER 
+      if not self.driver_station.isJoystickConnected(0) or not self.driver_station.isJoystickConnected(1):
+         return
+      diagnostic_controller = wpilib.interfaces.GenericHID(0)
+      if diagnostic_controller.getRawButton(12):
+         ID.OPERATOR_CONTROLLER = 1
+         ID.DRIVE_CONTROLLER = 0
+      else:
+         ID.OPERATOR_CONTROLLER = 0
+         ID.DRIVE_CONTROLLER = 1
+         
       self.rotary_controller = rotary_joystick.RotaryJoystick(ID.OPERATOR_CONTROLLER)
       self.operator_controller = wpilib.interfaces.GenericHID(ID.OPERATOR_CONTROLLER)
       self.drive_controller = wpilib.XboxController(ID.DRIVE_CONTROLLER)
@@ -100,7 +110,7 @@ class MyRobot(wpilib.TimedRobot):
       #subsystems: These combine multiple components into a coordinated system
       self._drive = drive.Drive(self.frontLeft, self.backLeft, self.frontRight, self.backRight, self.drive_imu, self.pid)
       self._shooter = shooter.Shooter(self.shooterMotor, self.shooterServo, self.colorSensor, self.alliance_color)
-      self._intaker = intaker.Intaker(self.intakeLift, self.intakeSpin)
+      self._intaker = intaker.Intaker(self.intakeLift, self.intakeSpin, self.intakeUpperSpin)
       self._ball_sensor = ball_sensor.BallSensor(self.colorSensor, self.alliance_color)
 
       #commands: These utilize subsystems to perform autonomous routines.
@@ -121,6 +131,7 @@ class MyRobot(wpilib.TimedRobot):
       self.frontRight.setInverted(False)
       self.backRight.setInverted(False)
       self.intakeSpin.setInverted(True)
+      self.intakeSpin.setInverted(True)
 
       for motor in self.talon_motors:
          motor.setNeutralMode(ctre.NeutralMode.Brake)
@@ -130,16 +141,19 @@ class MyRobot(wpilib.TimedRobot):
       
    def teleopPeriodic(self):
       try:
+         # TRANSFER THESE TO ID.PY WHEN WE GET THE FINAL BUTTON ID'S
          auto_shoot_button = self.operator_controller.getRawButton(7)
          manual_transport_button = self.operator_controller.getRawButton(6)
          manual_shoot_button = self.operator_controller.getRawButton(8)
+         # THIS BUTTON MIGHT BECOME A TOGGLE SWITCH BUT SHOULD STILL WORK THE SAME
 
          auto_intake_button = self.operator_controller.getRawButton(1)
          manual_intake_spin = self.operator_controller.getRawButton(2)
          manual_intake_spin_reverse = self.operator_controller.getRawButton(3)
-         manual_intake_spin_toggle =  False #self.operator_controller.getRawButton(12)
-         manual_intake_raise = self.operator_controller.getRawButton(4) #I decomented this - Henri
-         manual_intake_lower = self.operator_controller.getRawButton(5) #I decomented this - Henri
+         manual_intake_spin_toggle =  self.operator_controller.getRawButton(9)
+         manual_intake_spin_only_lower = self.operator_controller.getRawButton(10)
+         manual_intake_raise = self.operator_controller.getRawButton(4)
+         manual_intake_lower = self.operator_controller.getRawButton(5)
 
 
 
@@ -168,7 +182,7 @@ class MyRobot(wpilib.TimedRobot):
          if self.enable_shooter:
             self.manualShooter(manual_shoot_button, manual_transport_button)
          if self.enable_intake:
-            self.manualIntake(manual_intake_spin_toggle, manual_intake_spin, manual_intake_spin_reverse, manual_intake_raise, manual_intake_lower)
+            self.manualIntake(manual_intake_spin_toggle, manual_intake_spin, manual_intake_spin_reverse, manual_intake_spin_only_lower, manual_intake_raise, manual_intake_lower)
 
       except:
          raise
@@ -179,19 +193,23 @@ class MyRobot(wpilib.TimedRobot):
       speed_y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
       self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
 
-     
-   
    def manualDrive(self):
       y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
       x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.1)
       # twist = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
       self._drive.arcadeDrive(y, x, self.motor_power_multiplyer)
 
-   def manualIntake(self, toggle, spin, reverse, _raise, lower):
+   def manualIntake(self, toggle, spin, reverse, bottom_only, _raise, lower):
       if reverse:
-         self._intaker.spin(-1)
+         if bottom_only:
+            self._intaker.spin(-1, False)
+         else:
+            self._intaker.spin(-1, True)
       elif spin or toggle:
-         self._intaker.spin(1)
+         if bottom_only:
+            self._intaker.spin(1, False)
+         else:
+            self._intaker.spin(1, True)
       else:
          self._intaker.stop()
       # CONFIG LIMIT SWITCHES IN PHOENIX TUNER BEFORE USING THIS CODE ALSO CHECK IF NORMALLY CLOSED OR OPEN

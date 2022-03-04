@@ -57,7 +57,7 @@ class Shoot:
       self.flywheel_desiredSpeed = math_functions.shootInterp(self.shooter.getCameraInfo()[2])
       self.shooter.transportServo.setAngle(180)
 
-   def spin_pid(self, debug, motor_power_multiplier):
+   def spin_pid(self, debug, motor_power_multiplier, manual_enabled):
       current_vel = self.shooter.shooterMotor.getSelectedSensorVelocity(0)
       delta = self.flywheel_desiredSpeed - current_vel
       #pwr = delta * 0.001
@@ -68,31 +68,31 @@ class Shoot:
          pwr = -0.5
       if (self.flywheel_desiredSpeed == 0):
          pwr = 0
-      self.shooter.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr * motor_power_multiplier)
+      if not manual_enabled:
+         self.shooter.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr * motor_power_multiplier)
       if debug:
          print ("spin: ", current_vel, " ", self.flywheel_desiredSpeed, " ", delta)
       return (abs(delta) < self.flywheel_desiredSpeed/10) # within 10% of desired speed
    
-   def transporting(self, angle):
-      self.shooter.transportServo.setAngle(angle)
+   def transporting(self, angle, manual_enabled):
+      if not manual_enabled:
+         self.shooter.transportServo.setAngle(angle)
 
    #always run this function in robot.py teleop
-   # MSG FOR KYLE: USE THE VALUES PASSED INTO THIS FUNCTION TO DISABLE CERTAIN PARTS OF THE STATE MACHINE 
-   # TO NOT HAVE CONFLICT WITH THE MANUAL BUTTON PRESSES; MANUAL BUTTON PRESSES OVERRIDE AUTONOMOUS STATE
-   # KYLE-I CODED IT BUT DID NOT TEST IT. I ALSO CLEANED UP THIS FILE A LITTLE MORE
-   # MACHINE FUNCTIONS
+   #THX FOR PUTTING THE MANUAL STUFF IN, GOOD WORK - GREG
    def execute(self, button_pressed, manual_transport_enabled, manual_shooter_enabled, motor_power_multiplyer):
       retval = False # not taking control of drive motors
-      self.spin_pid(False, motor_power_multiplyer)
+      self.spin_pid(False, motor_power_multiplyer, manual_shooter_enabled)
       if manual_shooter_enabled:
          self.flywheel_desiredSpeed = 7500
       else:
          self.flywheel_desiredSpeed = 0
       if self.state == self.IDLE:
-         if manual_transport_enabled:
-            self.transporting(ID.SERVO_MAX)
-         else:
-            self.transporting(ID.SERVO_MIN)
+         # if manual_transport_enabled:
+         #    self.transporting(ID.SERVO_MAX)
+         # else:
+         #    self.transporting(ID.SERVO_MIN)
+         # THIS GOT MOVED TO OUTSIDE THE FUNCTION IN ROBOT.PY
          if button_pressed:
             self.ball = self.shooter.getBallStatus()
             #self.shooter.printBallStatus()
@@ -114,7 +114,7 @@ class Shoot:
       elif self.state == self.SPINNING:
          if button_pressed:
             retval = True # controlling drive motors
-            if self.spinning(self.ball, motor_power_multiplyer) and self.spin_pid(True, motor_power_multiplyer):
+            if self.spinning(self.ball, motor_power_multiplyer) and self.spin_pid(True, motor_power_multiplyer, manual_shooter_enabled):
                self.state = self.FIRING
                print ("state=firing")
                self.startServoTime = wpilib.Timer.getFPGATimestamp()
@@ -125,14 +125,14 @@ class Shoot:
          if button_pressed:
             retval = True # controlling drive motors
             self.spinning(self.ball, motor_power_multiplyer)
-            self.transporting(ID.SERVO_MAX)
+            self.transporting(ID.SERVO_MAX, manual_transport_enabled)
             if self.startServoTime + 0.4 < wpilib.Timer.getFPGATimestamp():
                self.state = self.RELAXING
                print ("state=relaxing")
          else:
             self.state = self.RELAXING
       elif self.state == self.RELAXING:
-         self.transporting(ID.SERVO_MIN)
+         self.transporting(ID.SERVO_MIN, manual_transport_enabled)
          if self.startServoTime + 0.8 < wpilib.Timer.getFPGATimestamp():
             self.state = self.IDLE
             print ("state=idle")
