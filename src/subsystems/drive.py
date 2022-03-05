@@ -1,5 +1,6 @@
 from ctre import WPI_TalonFX
 import math
+from commands import shoot
 from utils import pid, imutil
 
 # parameter : type
@@ -14,6 +15,8 @@ class Drive:
       
       self.drive_imu = _drive_imu
       self.pid = _pid
+      self.pidshootturn = _pid
+      self.pidshootturn.set_pid(0.01, 0.0002, 0.05, 0)
 
    #HELPER FUNCTIONS
    def setRightSpeed(self, speed):
@@ -47,14 +50,17 @@ class Drive:
       right_speed = right_y
       self.setSpeed(left_speed, right_speed)
 
-   def absoluteDrive(self, speed, leftright, desired_angle, mult):
+   def absoluteDrive(self, speed, leftright, desired_angle, normal_drive, mult):
       # speed is a float value from -1 to 1
       cur_rotation = self.drive_imu.getYaw()
         # finds angle difference (delta angle) in range -180 to 180
       delta_angle = desired_angle - cur_rotation
       delta_angle = ((delta_angle + 180) % 360) - 180
         # PID steering power limited between -1 and 1
-      steer = max(-1, min(1, self.pid.steer_pid(delta_angle)))
+      if normal_drive:
+         steer = max(-1, min(1, self.pid.steer_pid(delta_angle)))
+      else:
+         steer = max(-1, min(1, self.pidshootturn.steer_pid(delta_angle)))
       
       self.frontLeft.set((speed - leftright + steer) * mult)
       self.frontRight.set((speed + leftright - steer) * mult)

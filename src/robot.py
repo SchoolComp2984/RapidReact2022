@@ -14,14 +14,19 @@ class MyRobot(wpilib.TimedRobot):
    RADS_PER_COUNT = 2 * 3.14159 / 2048
 
    def robotInit(self):
-
+      
       #SUBSYSTEM ENABLERS
-      self.enable_driving = False
+      self.enable_driving = True
       self.enable_intake = True
-      self.enable_shooter = True
+      self.enable_shooter = False
       # automated drive is used when the limelight and IMU are both working...
       # ...if they are not working then we can default to a completely teleoperated drive
       self.automated_drive = True
+
+      #autonomous states
+      self.auto_one_ball = False
+      self.auto_two_balls = False
+      self.auto_three_balls = False
 
       self.pid = pid.PID()
       #Original PID constants: 0.4, 0.001, 2
@@ -79,33 +84,12 @@ class MyRobot(wpilib.TimedRobot):
 
       self.talon_motors = [ 
          self.intakeSpin,
-         self.intakeLift,
          self.backLeft, 
          self.backRight, 
          self.frontLeft, 
          self.frontRight,
          self.shooterMotor
       ]
-
-      # while rotary_joystick.RotaryJoystick(ID.DRIVE_CONTROLLER).getRawButton(12) or not rotary_joystick.RotaryJoystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
-      #    ID.OPERATOR_CONTROLLER = 1- ID.OPERATOR_CONTROLLER 
-      #    ID.DRIVE_CONTROLLER = 1- ID.DRIVE_CONTROLLER 
-
-      # This is assuming the drive controller has button 12 shorted.
-      while not wpilib.Joystick(ID.DRIVE_CONTROLLER).getRawButton(12) and wpilib.Joystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
-         # Switch the numbers for each controller
-         op_id = ID.OPERATOR_CONTROLLER
-         ID.OPERATOR_CONTROLLER = ID.DRIVE_CONTROLLER 
-         ID.DRIVE_CONTROLLER = op_id
-
-      print("Operator controller id: " + str(ID.OPERATOR_CONTROLLER))
-      print("Drive controller id: " + str(ID.DRIVE_CONTROLLER))
-
-      self.rotary_controller = rotary_joystick.RotaryJoystick(ID.OPERATOR_CONTROLLER)
-      self.operator_controller = wpilib.interfaces.GenericHID(ID.OPERATOR_CONTROLLER)
-      self.drive_controller = wpilib.XboxController(ID.DRIVE_CONTROLLER)
-      #self.HAND_LEFT = wpilib.interfaces.GenericHID.Hand.kLeftHand
-      #self.HAND_RIGHT = wpilib.interfaces.GenericHID.Hand.kRightHand
 
       #subsystems: These combine multiple components into a coordinated system
       self._drive = drive.Drive(self.frontLeft, self.backLeft, self.frontRight, self.backRight, self.drive_imu, self.pid)
@@ -123,10 +107,30 @@ class MyRobot(wpilib.TimedRobot):
 
    def autonomousPeriodic(self) -> None:
       #Drive back for 0.2 second
-      pass
+      if (self.auto_one_ball):
+          if not self._shoot.execute(True, False, False, 1):
+            pass
 
    def teleopInit(self):
       print("Starting")
+
+      #Shorting rotary controller with the spinny thing 
+      # This is assuming the drive controller has button 12 shorted.
+      while not wpilib.Joystick(ID.ROTARY_CONTROLLER).getRawButton(12) or wpilib.Joystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
+         # Switch the numbers for each controller
+         op_id = ID.OPERATOR_CONTROLLER
+         ID.OPERATOR_CONTROLLER = ID.ROTARY_CONTROLLER 
+         ID.ROTARY_CONTROLLER = op_id
+
+      self.rotary_controller = rotary_joystick.RotaryJoystick(ID.ROTARY_CONTROLLER)
+      self.rotary_buttons = wpilib.interfaces.GenericHID(ID.ROTARY_CONTROLLER)
+      self.operator_controller = wpilib.interfaces.GenericHID(ID.OPERATOR_CONTROLLER)
+      self.joystick_controller = wpilib.XboxController(ID.OPERATOR_CONTROLLER)
+      #self.HAND_LEFT = wpilib.interfaces.GenericHID.Hand.kLeftHand
+      #self.HAND_RIGHT = wpilib.interfaces.GenericHID.Hand.kRightHand
+      print("Operator controller id: ", str(ID.OPERATOR_CONTROLLER))
+      print("Rotary controller id: ", str(ID.ROTARY_CONTROLLER))
+
       self.frontLeft.setInverted(True)
       self.backLeft.setInverted(True)
       self.frontRight.setInverted(False)
@@ -142,16 +146,17 @@ class MyRobot(wpilib.TimedRobot):
    def teleopPeriodic(self):
       try:
          # TRANSFER THESE TO ID.PY WHEN WE GET THE FINAL BUTTON ID'S
-         auto_shoot_button = self.operator_controller.getRawButton(7)
-         manual_transport_button = self.operator_controller.getRawButton(6)
-         manual_shoot_button = self.operator_controller.getRawButton(8)
+         auto_shoot_button = self.operator_controller.getRawButton(3)
+         manual_transport_button = self.operator_controller.getRawButton(2)
+         manual_shoot_button = self.operator_controller.getRawButton(3)
          # THIS BUTTON MIGHT BECOME A TOGGLE SWITCH BUT SHOULD STILL WORK THE SAME
 
-         auto_intake_button = self.operator_controller.getRawButton(1)
-         manual_intake_spin_bottom = self.operator_controller.getRawButton(2)
-         manual_intake_spin_top = self.operator_controller.getRawButton(3)
-         manual_intake_spin_reverse = self.operator_controller.getRawButton(4)
-         manual_intake_spin_toggle =  self.operator_controller.getRawButton(5)
+         auto_intake_button = self.operator_controller.getRawButton(4)
+         manual_intake_spin_bottom = self.operator_controller.getRawButton(5)
+         manual_intake_spin_top = self.operator_controller.getRawButton(11)
+         manual_intake_spin_both = self.operator_controller.getRawButton(7)
+         manual_intake_spin_reverse = self.operator_controller.getRawButton(6)
+         manual_intake_spin_toggle =  self.operator_controller.getRawButton(8)
 
 
          self.battery_voltage = self.driver_station.getBatteryVoltage()
@@ -159,7 +164,9 @@ class MyRobot(wpilib.TimedRobot):
 
          #if self.printTimer.hasPeriodPassed(0.5):
          #   print("intake camera coords: ", self._intaker.getCameraInfo())
-
+         
+         self.manual_drive = self.rotary_controller.getRawButton(11)
+         
          #DRIVING AND COOL STATE MACHINES
          if (self.enable_driving):
             if False:#self._shoot.execute(auto_shoot_button, manual_transport_button, manual_shoot_button, self.motor_power_multiplyer):
@@ -171,46 +178,49 @@ class MyRobot(wpilib.TimedRobot):
                self._intake.execute(self.motor_power_multiplyer)
                self.rotary_controller.reset_angle(self.drive_imu.getYaw())
             else:
-               if (self.automated_drive):
-                  self.automatedDrive()
-               else:
+               if (self.manual_drive):
                   self.manualDrive()
+               else:
+                  self.automatedDrive()
 
          if self.enable_shooter:
             self.manualShooter(manual_shoot_button, manual_transport_button)
          if self.enable_intake:
-            self.manualIntake(manual_intake_spin_toggle, manual_intake_spin_bottom, manual_intake_spin_top, manual_intake_spin_reverse)
+            self.manualIntake(manual_intake_spin_toggle, manual_intake_spin_bottom, manual_intake_spin_top, manual_intake_spin_reverse, manual_intake_spin_both)
 
       except:
          raise
 
    def automatedDrive(self):
       angle = self.rotary_controller.rotary_inputs()
-      speed_x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.1)
-      speed_y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
-      self._drive.absoluteDrive(speed_y, speed_x, angle, self.motor_power_multiplyer)
+      #deadzone to stop robot driving off when rotary controller isnt spinning
+      speed_x = math_functions.good_joystick_interp(self.joystick_controller.getRawAxis(0), 0.15, 3)
+      speed_y = math_functions.good_joystick_interp(self.joystick_controller.getRawAxis(1), 0.05, 2)
+      self._drive.absoluteDrive(speed_y, speed_x, angle, True, self.motor_power_multiplyer)
 
    def manualDrive(self):
-      y = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(1), 0.05)
-      x = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.1)
-      # twist = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
+      y = math_functions.good_joystick_interp(self.joystick_controller.getRawAxis(1), 0.05, 2)
+      x = math_functions.good_joystick_interp(self.joystick_controller.getRawAxis(0), 0.15, 3)
+      # twist = math_functions.good_joystick_interp(self.joystick_controller.getRawAxis(0), 0.2)
       self._drive.arcadeDrive(y, x, self.motor_power_multiplyer)
+      self.rotary_controller.reset_angle(self._drive.getYaw())
 
-   def manualIntake(self, toggle, bottom, top, reverse):
-      if top:
-         if reverse:
-            self._intaker.spin_top(-1)
-         else:
-            self._intaker.spin_top(1)
-      else:
-         self._intaker.stop_top()
-      if bottom or toggle:
+   def manualIntake(self, toggle, bottom, top, reverse, both):
+      if bottom:
+         self._intaker.spin_top(0)
          if reverse:
             self._intaker.spin_bottom(-1)
          else:
             self._intaker.spin_bottom(1)
+      elif toggle or both: 
+         if reverse:
+            self._intaker.spin_bottom(-1)
+            self._intaker.spin_top(-1)
+         else:
+            self._intaker.spin_bottom(1)
+            self._intaker.spin_top(1)
       else:
-         self._intaker.stop_bottom()
+         self._intaker.stop()
 
    def manualShooter(self, shoot, transport):
       if shoot:

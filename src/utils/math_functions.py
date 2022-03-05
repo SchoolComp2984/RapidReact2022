@@ -54,12 +54,12 @@ def good_interp(func_degree, min_input, max_input, min_output, max_output, value
     new_value = (max_output - min_output) * (value * (1 + min_input) / max_input - min_input) ** func_degree + min_output
     return clamp(new_value, min_output, max_output)
 
-def good_joystick_interp(joy_value, deadzone):
+def good_joystick_interp(joy_value, deadzone, degree):
     #joy value -1 to 1
     #deadzone 0 to 1
     new_value = 0
     if abs(joy_value) > deadzone:
-        new_value = good_interp(2, deadzone, 1, 0, 1, abs(joy_value))
+        new_value = good_interp(degree, deadzone, 1, 0, 1, abs(joy_value))
         if joy_value < 0:
             new_value *= -1
         else:

@@ -33,7 +33,7 @@ class Shoot:
       if not self.shooter.hasTarget():
          power = 0
          self.target_angle = self.drive.getYaw()
-      self.drive.absoluteDrive(power, 0, self.target_angle, motor_power_multiplyer)
+      self.drive.absoluteDrive(power, 0, self.target_angle, False, motor_power_multiplyer)
       print ("limelight x, limelight y: ", self.shooter.getCameraInfo()[1], self.shooter.getCameraInfo()[2])
       return (power == 0 and abs(delta_angle) < 2 and self.shooter.hasTarget())
 
@@ -47,7 +47,7 @@ class Shoot:
          print ("Forwards state= ", self.state, motor_power_multiplyer)
       else:
          forwards = 0
-      self.drive.absoluteDrive(forwards, 0, self.target_angle, motor_power_multiplyer)
+      self.drive.absoluteDrive(forwards, 0, self.target_angle, False, motor_power_multiplyer)
       self.flywheel_desiredSpeed = math_functions.shootInterp(self.shooter.getCameraInfo()[2])
       if ball == False:
          return abs(delta_angle) > 22-2
@@ -83,6 +83,7 @@ class Shoot:
    def execute(self, button_pressed, manual_transport_enabled, manual_shooter_enabled, motor_power_multiplyer):
       retval = False # not taking control of drive motors
       self.spin_pid(False, motor_power_multiplyer, manual_shooter_enabled)
+      # THIS CODE MIGHT NOT WORK BECAUSE THE DESIREDSPEED MIGHT BE SWITCHED
       if manual_shooter_enabled:
          self.flywheel_desiredSpeed = 7500
       else:
