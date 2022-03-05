@@ -9,48 +9,32 @@ class Intaker:
 
    #Big wheels
    INTAKE_POWER = 2.9
-   
-   def __init__(self, _lift_motor : WPI_TalonSRX, _spin_motor : WPI_TalonSRX, _upper_spin_motor : rev.CANSparkMax) -> None:
-      self.top_motor = _lift_motor
-      self.spin_motor = _spin_motor
-      self.upper_spin_motor = _upper_spin_motor
+   OUTAKE_POWER = 3.8
+   def __init__(self, _bottom_spin_motor : WPI_TalonSRX, _top_spin_motor : rev.CANSparkMax) -> None:
+      self.bottom_spin_motor = _bottom_spin_motor
+      self.top_spin_motor = _top_spin_motor
 
-   """
-   def spin(self, dir : int):
+   def spin_top(self, dir : int):
       if dir < 0:
-         self.spin_motor.setVoltage(self.INTAKE_POWER * -1.4)
+         self.top_spin_motor.setVoltage(self.OUTAKE_POWER * -1)
       else:
-         self.spin_motor.setVoltage(self.INTAKE_POWER)   
-   """
+         self.top_spin_motor.setVoltage(self.INTAKE_POWER * -1)
 
-   def spin(self, dir : int, both : bool):
+   def spin_bottom(self, dir : int):
       if dir < 0:
-         if both:
-            self.spin_motor.setVoltage(self.INTAKE_POWER * -1.4)
-            self.upper_spin_motor.setVoltage(self.INTAKE_POWER * -1.4)
-         else:
-            self.spin_motor.setVoltage(self.INTAKE_POWER * -1.4)
+         self.bottom_spin_motor.setVoltage(self.OUTAKE_POWER)
       else:
-         if both:
-            self.spin_motor.setVoltage(self.INTAKE_POWER)
-            self.upper_spin_motor.setVoltage(self.INTAKE_POWER)
-         else:
-            self.spin_motor.setVoltage(self.INTAKE_POWER)
+         self.bottom_spin_motor.setVoltage(self.INTAKE_POWER)
+
+   def stop_top(self):
+      self.top_spin_motor.set(0)
+
+   def stop_bottom(self):
+      self.bottom_spin_motor.set(0)
 
    def stop(self):
-      self.spin_motor.set(0)
-      self.upper_spin_motor.set(0)
-
-   #small wheels backwards
-   def lower(self):
-      self.top_motor.set(-0.2)
-
-   #small wheels main
-   def _raise(self):
-      self.top_motor.set(0.2)
-
-   def stop_lift(self):
-      self.top_motor.set(0)
+      self.stop_top()
+      self.stop_bottom()
 
    def getCameraInfo(self):
       networkTableData = NetworkTables.getTable("SmartDashboard")

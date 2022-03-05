@@ -72,7 +72,6 @@ class MyRobot(wpilib.TimedRobot):
       #self.shooterMotor.configMotionAcceleration(20,10)
 
       self.intakeSpin = ctre.WPI_TalonSRX(ID.INTAKE_SPIN)
-      self.intakeLift = ctre.WPI_TalonSRX(ID.INTAKE_LIFT)
       self.intakeUpperSpin = rev.CANSparkMax(ID.INTAKE_UPPER, rev.CANSparkMaxLowLevel.MotorType.kBrushless)
       self.drive_imu = imutil.Imutil(self.intakeSpin)
 
@@ -88,9 +87,19 @@ class MyRobot(wpilib.TimedRobot):
          self.shooterMotor
       ]
 
-      while rotary_joystick.RotaryJoystick(ID.DRIVE_CONTROLLER).getRawButton(12) or not rotary_joystick.RotaryJoystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
-         ID.OPERATOR_CONTROLLER = 1 - ID.OPERATOR_CONTROLLER 
-         ID.DRIVE_CONTROLLER = 1 - ID.DRIVE_CONTROLLER 
+      # while rotary_joystick.RotaryJoystick(ID.DRIVE_CONTROLLER).getRawButton(12) or not rotary_joystick.RotaryJoystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
+      #    ID.OPERATOR_CONTROLLER = 1- ID.OPERATOR_CONTROLLER 
+      #    ID.DRIVE_CONTROLLER = 1- ID.DRIVE_CONTROLLER 
+
+      # This is assuming the drive controller has button 12 shorted.
+      while not wpilib.Joystick(ID.DRIVE_CONTROLLER).getRawButton(12) or wpilib.Joystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
+         # Switch the numbers for each controller
+         op_id = ID.OPERATOR_CONTROLLER
+         ID.OPERATOR_CONTROLLER = ID.DRIVE_CONTROLLER 
+         ID.DRIVE_CONTROLLER = op_id
+
+      print("Operator controller id: " + str(ID.OPERATOR_CONTROLLER))
+      print("Drive controller id: " + str(ID.DRIVE_CONTROLLER))
 
       self.rotary_controller = rotary_joystick.RotaryJoystick(ID.OPERATOR_CONTROLLER)
       self.operator_controller = wpilib.interfaces.GenericHID(ID.OPERATOR_CONTROLLER)
@@ -101,7 +110,7 @@ class MyRobot(wpilib.TimedRobot):
       #subsystems: These combine multiple components into a coordinated system
       self._drive = drive.Drive(self.frontLeft, self.backLeft, self.frontRight, self.backRight, self.drive_imu, self.pid)
       self._shooter = shooter.Shooter(self.shooterMotor, self.shooterServo, self.colorSensor, self.alliance_color)
-      self._intaker = intaker.Intaker(self.intakeLift, self.intakeSpin, self.intakeUpperSpin)
+      self._intaker = intaker.Intaker(self.intakeSpin, self.intakeUpperSpin)
       self._ball_sensor = ball_sensor.BallSensor(self.colorSensor, self.alliance_color)
 
       #commands: These utilize subsystems to perform autonomous routines.
@@ -110,10 +119,11 @@ class MyRobot(wpilib.TimedRobot):
 
       
    def autonomousInit(self) -> None:
-       self.autoState = self.SHOOT
+      self.autoState = self.SHOOT
 
    def autonomousPeriodic(self) -> None:
-       pass
+      #Drive back for 0.2 second
+      pass
 
    def teleopInit(self):
       print("Starting")
@@ -122,7 +132,7 @@ class MyRobot(wpilib.TimedRobot):
       self.frontRight.setInverted(False)
       self.backRight.setInverted(False)
       self.intakeSpin.setInverted(True)
-      self.intakeUpperSpin.setInverted(True)
+
       for motor in self.talon_motors:
          motor.setNeutralMode(ctre.NeutralMode.Brake)
 
@@ -140,9 +150,8 @@ class MyRobot(wpilib.TimedRobot):
          auto_intake_button = self.operator_controller.getRawButton(1)
          manual_intake_spin_bottom = self.operator_controller.getRawButton(2)
          manual_intake_spin_top = self.operator_controller.getRawButton(3)
-         manual_intake_spin_toggle =  self.operator_controller.getRawButton(9)
          manual_intake_spin_reverse = self.operator_controller.getRawButton(4)
-
+         manual_intake_spin_toggle =  self.operator_controller.getRawButton(5)
 
 
          self.battery_voltage = self.driver_station.getBatteryVoltage()
@@ -187,23 +196,25 @@ class MyRobot(wpilib.TimedRobot):
       # twist = math_functions.good_joystick_interp(self.drive_controller.getRawAxis(0), 0.2)
       self._drive.arcadeDrive(y, x, self.motor_power_multiplyer)
 
-   def manualIntake(self, bottom, top, reverse ):
-      if reverse:
-         if bottom:
-            self._intaker.spin(-1, False)
+   def manualIntake(self, toggle, bottom, top, reverse):
+      if top:
+         if reverse:
+            self._intaker.spin_top(-1)
          else:
-            self._intaker.spin(-1, True)
-      elif spin or toggle:
-         if bottom:
-            self._intaker.spin(1, False)
-         else:
-            self._intaker.spin(1, True)
+            self._intaker.spin_top(1)
       else:
-         self._intaker.stop()
+         self._intaker.stop_top()
+      if bottom or toggle:
+         if reverse:
+            self._intaker.spin_bottom(-1)
+         else:
+            self._intaker.spin_bottom(1)
+      else:
+         self._intaker.stop_bottom()
 
    def manualShooter(self, shoot, transport):
       if shoot:
-         self._shooter.setSpeed(0.6)
+         self._shooter.setSpeed(0.8)
       else:
          self._shooter.setSpeed(0)
       if transport:
