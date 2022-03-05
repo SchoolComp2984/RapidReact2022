@@ -92,7 +92,7 @@ class MyRobot(wpilib.TimedRobot):
       #    ID.DRIVE_CONTROLLER = 1- ID.DRIVE_CONTROLLER 
 
       # This is assuming the drive controller has button 12 shorted.
-      while not wpilib.Joystick(ID.DRIVE_CONTROLLER).getRawButton(12) or wpilib.Joystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
+      while not wpilib.Joystick(ID.DRIVE_CONTROLLER).getRawButton(12) and wpilib.Joystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
          # Switch the numbers for each controller
          op_id = ID.OPERATOR_CONTROLLER
          ID.OPERATOR_CONTROLLER = ID.DRIVE_CONTROLLER 
