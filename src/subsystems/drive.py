@@ -16,6 +16,8 @@ class Drive:
       self.drive_imu = _drive_imu
       self.pid = _pid
       self.pidshootturn = _pid
+      #I CHANGED THESE on 3/7/22 (Charlie)
+      #  self.pidshootturn.set_pid(0.01, 0.0002, 0.05, 0)
       self.pidshootturn.set_pid(0.01, 0.0002, 0.05, 0)
 
    #HELPER FUNCTIONS
@@ -50,6 +52,9 @@ class Drive:
       right_speed = right_y
       self.setSpeed(left_speed, right_speed)
 
+   def stop(self):
+      self.setSpeed(0, 0)
+      
    def absoluteDrive(self, speed, leftright, desired_angle, normal_drive, mult):
       # speed is a float value from -1 to 1
       cur_rotation = self.drive_imu.getYaw()
@@ -66,6 +71,7 @@ class Drive:
       self.frontRight.set((speed + leftright - steer) * mult)
       self.backLeft.set((speed + leftright + steer) * mult)
       self.backRight.set((speed - leftright - steer) * mult)
+      print("rotation: ", cur_rotation, "delta: ",delta_angle)
 
    #Drive method for mecanum wheels
    def mecanumDrive(self, joy_y, joy_x, desired_angle):

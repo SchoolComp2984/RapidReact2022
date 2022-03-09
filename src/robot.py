@@ -1,3 +1,4 @@
+
 import wpilib, ctre, rev
 from commands import shoot, intake
 from utils import ID, pid, math_functions, imutil, constants
@@ -18,7 +19,7 @@ class MyRobot(wpilib.TimedRobot):
       #SUBSYSTEM ENABLERS
       self.enable_driving = True
       self.enable_intake = True
-      self.enable_shooter = False
+      self.enable_shooter = True
       # automated drive is used when the limelight and IMU are both working...
       # ...if they are not working then we can default to a completely teleoperated drive
       self.automated_drive = True
@@ -30,6 +31,8 @@ class MyRobot(wpilib.TimedRobot):
 
       self.pid = pid.PID()
       #Original PID constants: 0.4, 0.001, 2
+      #PID constants I (charlie) changed on 3/7/22
+      #  self.pid.set_pid(0.01, 0.0002, 0.05, 0)
       self.pid.set_pid(0.01, 0.0002, 0.05, 0)
 
       self.printTimer = wpilib.Timer()
@@ -104,12 +107,40 @@ class MyRobot(wpilib.TimedRobot):
       
    def autonomousInit(self) -> None:
       self.autoState = self.SHOOT
+      self.backup_start_time = 0.0
+      self.STATE = self.IDLE 
+      self.IDLE = 0
+      self.SHOOTING = 1
+      self.MOVING = 2
+      self.DONE = 3
 
    def autonomousPeriodic(self) -> None:
       #Drive back for 0.2 second
       if (self.auto_one_ball):
-          if not self._shoot.execute(True, False, False, 1):
+         if self.STATE == self.IDLE:
+            self.state = self.SHOOTING
+         elif self.state == self.SHOOTING:
+            if not self._shoot.execute(True, False, False, 1):
+               self.backup_start_time = wpilib.Timer.getFPGATimestamp()
+               self.STATE = self.MOVING
+         elif self.state == self.MOVING:
+            self._drive.arcadeDrive(0.1, 0)
+            if self.backup_start_time + 0.2 < wpilib.Timer.getFPGATimestamp():
+               self.state = self.DONE
+         elif self.state == self.DONE:
+            self._drive.stop()
+         else:
+            self.state = self.IDLE
+            self._drive.stop()
+      elif self.auto_two_balls:
+         # MAKE ROBOT MOVE BACKWARDS (OR FORWARDS AND FAST) FIRST TO LOWER INTAKE
+         if self.state == self.IDLE:
+            self.state = self.MOVING
+         elif self.state == self.MOVING:
             pass
+      else:
+         pass
+
 
    def teleopInit(self):
       print("Starting")
@@ -148,7 +179,7 @@ class MyRobot(wpilib.TimedRobot):
          # TRANSFER THESE TO ID.PY WHEN WE GET THE FINAL BUTTON ID'S
          auto_shoot_button = self.operator_controller.getRawButton(3)
          manual_transport_button = self.operator_controller.getRawButton(2)
-         manual_shoot_button = self.operator_controller.getRawButton(3)
+         manual_shoot_button = self.operator_controller.getRawButton(1)
          # THIS BUTTON MIGHT BECOME A TOGGLE SWITCH BUT SHOULD STILL WORK THE SAME
 
          auto_intake_button = self.operator_controller.getRawButton(4)
@@ -165,6 +196,7 @@ class MyRobot(wpilib.TimedRobot):
          #if self.printTimer.hasPeriodPassed(0.5):
          #   print("intake camera coords: ", self._intaker.getCameraInfo())
          
+         # this line starts in arcade drive
          self.manual_drive = self.rotary_controller.getRawButton(11)
          
          #DRIVING AND COOL STATE MACHINES
