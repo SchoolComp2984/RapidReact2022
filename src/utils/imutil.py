@@ -12,3 +12,6 @@ class Imutil(PigeonIMU):
 
    def getYaw(self):
       return self.getRotation()[0]
+
+   def isWorking(self):
+      return True if self.getState() == PigeonIMU.PigeonState.Ready else False

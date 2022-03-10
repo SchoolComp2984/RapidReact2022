@@ -56,7 +56,8 @@ class Shooter:
          return True
       else:
          return False
-
+      #snazzy shorthand statement
+      #return True if self.getCameraInfo()[0] == 1 else False
 
 
       

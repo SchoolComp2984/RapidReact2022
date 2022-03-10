@@ -97,7 +97,8 @@ class Shoot:
          if button_pressed:
             self.ball = self.shooter.getBallStatus()
             #self.shooter.printBallStatus()
-            if (self.ball == True or self.ball == False) and self.shooter.hasTarget(): #if robot has ball and sees target
+            if (self.ball == True or self.ball == False) and self.shooter.hasTarget():
+               self.retval = True
                self.state = self.POSITIONING
                print ("state=positioning ", self.ball)
       elif self.state == self.POSITIONING:

@@ -1,4 +1,4 @@
-from ctre import WPI_TalonFX
+from ctre import PigeonIMU, WPI_TalonFX
 import math
 from commands import shoot
 from utils import pid, imutil
@@ -62,10 +62,12 @@ class Drive:
       delta_angle = desired_angle - cur_rotation
       delta_angle = ((delta_angle + 180) % 360) - 180
         # PID steering power limited between -1 and 1
-      if normal_drive:
-         steer = max(-1, min(1, self.pid.steer_pid(delta_angle)))
-      else:
-         steer = max(-1, min(1, self.pidshootturn.steer_pid(delta_angle)))
+      steer = 0
+      if self.drive_imu.isWorking():
+         if normal_drive:
+            steer = max(-1, min(1, self.pid.steer_pid(delta_angle)))
+         else:
+            steer = max(-1, min(1, self.pidshootturn.steer_pid(delta_angle)))
       
       self.frontLeft.set((speed - leftright + steer) * mult)
       self.frontRight.set((speed + leftright - steer) * mult)

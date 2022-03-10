@@ -45,8 +45,10 @@ class MyRobot(wpilib.TimedRobot):
       # To access what type of alliance it is: wpilib.DriverStation.Alliance.kBlue
       if wpilib.DriverStation.Alliance.kBlue == self.alliance:
          self.alliance_color = constants.BLUE
+         sd.putNumber("alliance_color", constants.BLUE)
       else:
          self.alliance_color = constants.RED
+         sd.putNumber("alliance_color", constants.RED)
 
       #BATTERY POWER LIMITING
       self.battery_voltage = self.driver_station.getBatteryVoltage()
@@ -106,40 +108,67 @@ class MyRobot(wpilib.TimedRobot):
 
       
    def autonomousInit(self) -> None:
-      self.autoState = self.SHOOT
+      self.NO_BALL = 0
+      self.ONE_BALL = 1
+      self.TWO_BALLS = 2
+      self.THREE_BALLS = 3
+
+      # This var determines which type of autonomous routine you want to use at the start of match
+      self.autoType = self.NO_BALL
+
       self.backup_start_time = 0.0
-      self.STATE = self.IDLE 
+      # This var determines the state inside of each different routine
+      self.state = self.IDLE 
       self.IDLE = 0
       self.SHOOTING = 1
       self.MOVING = 2
       self.DONE = 3
 
+      self.TURNING = 4
+
    def autonomousPeriodic(self) -> None:
-      #Drive back for 0.2 second
-      if (self.auto_one_ball):
-         if self.STATE == self.IDLE:
-            self.state = self.SHOOTING
-         elif self.state == self.SHOOTING:
-            if not self._shoot.execute(True, False, False, 1):
-               self.backup_start_time = wpilib.Timer.getFPGATimestamp()
-               self.STATE = self.MOVING
-         elif self.state == self.MOVING:
-            self._drive.arcadeDrive(0.1, 0)
-            if self.backup_start_time + 0.2 < wpilib.Timer.getFPGATimestamp():
-               self.state = self.DONE
-         elif self.state == self.DONE:
-            self._drive.stop()
+      try:
+         if self.autoType == self.ONE_BALL:
+            if self.state == self.IDLE:
+               self.state = self.SHOOTING
+            elif self.state == self.SHOOTING:
+               if not self._shoot.execute(True, False, False, 1):
+                  self.backup_start_time = wpilib.Timer.getFPGATimestamp()
+                  self.state = self.MOVING
+            elif self.state == self.MOVING:
+               self._drive.arcadeDrive(-0.2, 0)
+               if self.backup_start_time + 0.2 < wpilib.Timer.getFPGATimestamp():
+                  self.state = self.DONE
+            elif self.state == self.DONE:
+               self._drive.stop()
+            else:
+               self.state = self.IDLE
+               self._drive.stop()
+         # elif self.autoType == self.TWO_BALLS:
+         #    # MAKE ROBOT MOVE BACKWARDS (OR FORWARDS AND FAST) FIRST TO LOWER INTAKE
+         #    if self.state == self.IDLE:
+         #       self.state = self.MOVING
+         #    elif self.state == self.MOVING:
+         #       self._intaker.spin_bottom(1)
+         #       if self.at_ball:
+         #          self.state = self.TURNING
+         #    elif self.state == self.TURNING:
+         #       self._drive.arcadeDrive(0, 0.4)
+         #       if self._shooter.hasTarget():
+         #          self.state = self.SHOOTING
+         #    elif self.state == self.SHOOTING:
+         #       if not self._shoot.execute(True, False, False, 1):
+         #          self.STATE = self.DONE
+         #    elif self.state == self.DONE:
+         #       self._intaker.stop()
+         #       self._drive.stop()
+         #    else:
+         #       self.state = self.IDLE
+         #       self._drive.stop()
          else:
-            self.state = self.IDLE
-            self._drive.stop()
-      elif self.auto_two_balls:
-         # MAKE ROBOT MOVE BACKWARDS (OR FORWARDS AND FAST) FIRST TO LOWER INTAKE
-         if self.state == self.IDLE:
-            self.state = self.MOVING
-         elif self.state == self.MOVING:
             pass
-      else:
-         pass
+      except:
+         raise
 
 
    def teleopInit(self):
@@ -205,8 +234,6 @@ class MyRobot(wpilib.TimedRobot):
                # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
                self.rotary_controller.reset_angle(self.drive_imu.getYaw())
             elif False:
-               if (manual_intake_spin or manual_intake_spin_reverse or manual_intake_spin_toggle):
-                  manual_intake = True
                self._intake.execute(self.motor_power_multiplyer)
                self.rotary_controller.reset_angle(self.drive_imu.getYaw())
             else:
@@ -221,7 +248,7 @@ class MyRobot(wpilib.TimedRobot):
             self.manualIntake(manual_intake_spin_toggle, manual_intake_spin_bottom, manual_intake_spin_top, manual_intake_spin_reverse, manual_intake_spin_both)
 
       except:
-         raise
+         pass
 
    def automatedDrive(self):
       angle = self.rotary_controller.rotary_inputs()

@@ -10,7 +10,7 @@ class Intake:
    TURNING = 1
    MOVING = 2
 
-   STATE = TURNING
+   state = TURNING
 
    minBallDistance = -150
    maxBallDistance = -100
@@ -23,40 +23,31 @@ class Intake:
       self.ball_sensor = _ball_sensor
 
    def execute(self, motor_power_mult):
-      if self.STATE == self.IDLE:
-         if self.intaker.getCameraInfo()[0] and self.ball_sensor.getBallStatus():
-            self.STATE = self.TURNING
-      elif self.STATE == self.TURNING:
+      if self.state == self.IDLE:
+         if self.intaker.getCameraInfo()[0]:
+            self.state = self.TURNING
+      elif self.state == self.TURNING:
          delta_angle = self.intaker.getCameraInfo()[1] # get angle of target
          self.target_angle = self.drive.getYaw() - delta_angle
-         self.drive.absoluteDrive(0, 0, self.target_angle, motor_power_mult)
+         self.drive.absoluteDrive(0, 0, self.target_angle, False, motor_power_mult)
          if delta_angle < 2 and delta_angle > -2: #limit angle in degrees
-            self.STATE = self.MOVING
-      elif self.STATE == self.MOVING:
-         power = 0
-         delta_angle = self.intaker.getCameraInfo()[1] # get angle of target
-         self.target_angle = self.drive.getYaw() - delta_angle
-         if self.intaker.getCameraInfo()[2] < self.minBallDistance:
-            power = .2 #back up if too close
-         if self.intaker.getCameraInfo()[2] > self.maxBallDistance:
-            power = -.5 #move forward if too far
-         if not self.intaker.hasTarget():
-            power = 0
-         self.drive.absoluteDrive(power, 0, self.target_angle, motor_power_mult)
-         if self.intaker.getCameraInfo()[2] < -120 and self.intaker.getCameraInfo()[2] > -150:
-            self.startSpinTime = wpilib.Timer.getFPGATimestamp()
-            self.STATE = self.IDLE
+            self.state = self.MOVING
+      elif self.state == self.MOVING:
+         self.state = self.IDLE
+         # power = 0
+         # delta_angle = self.intaker.getCameraInfo()[1] # get angle of target
+         # self.target_angle = self.drive.getYaw() - delta_angle
+         # if self.intaker.getCameraInfo()[2] < self.minBallDistance:
+         #    power = .2 #back up if too close
+         # if self.intaker.getCameraInfo()[2] > self.maxBallDistance:
+         #    power = -.5 #move forward if too far
+         # if not self.intaker.hasTarget():
+         #    power = 0
+         # self.drive.absoluteDrive(power, 0, self.target_angle, motor_power_mult)
+         # if self.intaker.getCameraInfo()[2] < -120 and self.intaker.getCameraInfo()[2] > -150:
+         #    self.state = self.IDLE
       else:
          pass
 
-   def idle(self):
-      pass
-
-   def turn(self):
-      pass
-
-   def move(self):
-      pass
-
-   def consume(self):
-      pass
+   def reset(self):
+      self.state = self.IDLE
