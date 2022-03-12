@@ -24,11 +24,6 @@ class MyRobot(wpilib.TimedRobot):
       # ...if they are not working then we can default to a completely teleoperated drive
       self.automated_drive = True
 
-      #autonomous states
-      self.auto_one_ball = False
-      self.auto_two_balls = False
-      self.auto_three_balls = False
-
       self.pid = pid.PID()
       #Original PID constants: 0.4, 0.001, 2
       #PID constants I (charlie) changed on 3/7/22
@@ -64,13 +59,13 @@ class MyRobot(wpilib.TimedRobot):
       self.shooterMotor = ctre.WPI_TalonFX(ID.SHOOTER)
       self.shooterServo = wpilib.Servo(ID.SHOOTER_SERVO)
 
-      #self.shooterMotor.configSelectedFeedbackSensor(ctre.TalonFXFeedbackDevice.IntegratedSensor, 0, 10) # IntegratedSensor
+      self.shooterMotor.configSelectedFeedbackSensor(ctre.TalonFXFeedbackDevice.IntegratedSensor, 0, 10) # IntegratedSensor
       self.shooterMotor.configNominalOutputForward(0.2,10)
       self.shooterMotor.configNominalOutputReverse(0.1,10)
       self.shooterMotor.configPeakOutputForward(0.99,10) # limit to 0.1x of the max power
       self.shooterMotor.configPeakOutputReverse(0.5,10) # limit to 0.1x of the max power
       limits = ctre.SupplyCurrentLimitConfiguration(True, 40, 40, 0)
-      self.shooterMotor.configSupplyCurrentLimit(limits, 10)
+      self.shooterMotor.configSupplyCurrentLimit(limits, 50)
       #self.shooterMotor.setNeutralMode(self.shooterMotor.NeutralMode.Coast)
       self.shooterMotor.selectProfileSlot(0,0)
       self.shooterMotor.config_kF(0, 0.3, 10)
@@ -106,6 +101,15 @@ class MyRobot(wpilib.TimedRobot):
       self._shoot = shoot.Shoot(self._drive, self._shooter)
       self._intake = intake.Intake(self._drive, self._intaker, self._ball_sensor)
 
+      self.frontLeft.setInverted(True)
+      self.backLeft.setInverted(True)
+      self.frontRight.setInverted(False)
+      self.backRight.setInverted(False)
+      self.intakeSpin.setInverted(True)
+
+      for motor in self.talon_motors:
+         motor.setNeutralMode(ctre.NeutralMode.Brake)
+
       
    def autonomousInit(self) -> None:
       self.NO_BALL = 0
@@ -114,43 +118,65 @@ class MyRobot(wpilib.TimedRobot):
       self.THREE_BALLS = 3
 
       # This var determines which type of autonomous routine you want to use at the start of match
-      self.autoType = self.NO_BALL
+      self.autoType = self.ONE_BALL
 
       self.backup_start_time = 0.0
+      self.rev_start_time = 0.0
+      self.trans_start_time = 0.0
+
+      self.move_start_time = 0.0
       # This var determines the state inside of each different routine
-      self.state = self.IDLE 
       self.IDLE = 0
       self.SHOOTING = 1
       self.MOVING = 2
       self.DONE = 3
+      self.state = self.IDLE 
 
       self.TURNING = 4
+      self.TRANSPORTING = 5
 
    def autonomousPeriodic(self) -> None:
       try:
          if self.autoType == self.ONE_BALL:
             if self.state == self.IDLE:
                self.state = self.SHOOTING
+               self.rev_start_time = wpilib.Timer.getFPGATimestamp()
+
             elif self.state == self.SHOOTING:
-               if not self._shoot.execute(True, False, False, 1):
+               self._shooter.setSpeed(0.9)
+               if self.rev_start_time + 0.6 < wpilib.Timer.getFPGATimestamp():
+                  self.trans_start_time = wpilib.Timer.getFPGATimestamp()
+                  self.state = self.TRANSPORTING
+
+            elif self.state == self.TRANSPORTING:
+               self._shooter.transportUp()
+               self._shooter.setSpeed(0.9)
+               if self.trans_start_time + 1.0 < wpilib.Timer.getFPGATimestamp():
                   self.backup_start_time = wpilib.Timer.getFPGATimestamp()
                   self.state = self.MOVING
+
             elif self.state == self.MOVING:
-               self._drive.arcadeDrive(-0.2, 0)
+               self._drive.arcadeDrive(-0.2, 0, 1)
                if self.backup_start_time + 0.2 < wpilib.Timer.getFPGATimestamp():
                   self.state = self.DONE
+
             elif self.state == self.DONE:
                self._drive.stop()
+               self._shooter.setSpeed(0.9)
+               self._shooter.transportDown()
+
             else:
                self.state = self.IDLE
-               self._drive.stop()
+
          # elif self.autoType == self.TWO_BALLS:
          #    # MAKE ROBOT MOVE BACKWARDS (OR FORWARDS AND FAST) FIRST TO LOWER INTAKE
          #    if self.state == self.IDLE:
          #       self.state = self.MOVING
+         #       self.move_start_time = wpilib.Timer.getFPGATimestamp()
          #    elif self.state == self.MOVING:
          #       self._intaker.spin_bottom(1)
-         #       if self.at_ball:
+         #       self._drive.arcadeDrive(0.2, 0, 1)
+         #       if self.move_start_time + 0.2 < wpilib.Timer.getFPGATimestamp():
          #          self.state = self.TURNING
          #    elif self.state == self.TURNING:
          #       self._drive.arcadeDrive(0, 0.4)
@@ -165,8 +191,6 @@ class MyRobot(wpilib.TimedRobot):
          #    else:
          #       self.state = self.IDLE
          #       self._drive.stop()
-         else:
-            pass
       except:
          raise
 
@@ -190,15 +214,6 @@ class MyRobot(wpilib.TimedRobot):
       #self.HAND_RIGHT = wpilib.interfaces.GenericHID.Hand.kRightHand
       print("Operator controller id: ", str(ID.OPERATOR_CONTROLLER))
       print("Rotary controller id: ", str(ID.ROTARY_CONTROLLER))
-
-      self.frontLeft.setInverted(True)
-      self.backLeft.setInverted(True)
-      self.frontRight.setInverted(False)
-      self.backRight.setInverted(False)
-      self.intakeSpin.setInverted(True)
-
-      for motor in self.talon_motors:
-         motor.setNeutralMode(ctre.NeutralMode.Brake)
 
       if self.enable_driving:
          self.rotary_controller.reset_angle(self._drive.getYaw())
@@ -230,7 +245,8 @@ class MyRobot(wpilib.TimedRobot):
          
          #DRIVING AND COOL STATE MACHINES
          if (self.enable_driving):
-            if False:#self._shoot.execute(auto_shoot_button, manual_transport_button, manual_shoot_button, self.motor_power_multiplyer):
+            if False:
+            #if self._shoot.execute(auto_shoot_button, manual_transport_button, manual_shoot_button, self.motor_power_multiplyer):
                # also check if shooter has balls before aiming so we can stop the shooter from running when we finish shooting.
                self.rotary_controller.reset_angle(self.drive_imu.getYaw())
             elif False:
@@ -283,7 +299,7 @@ class MyRobot(wpilib.TimedRobot):
 
    def manualShooter(self, shoot, transport):
       if shoot:
-         self._shooter.setSpeed(0.8)
+         self._shooter.setSpeed(0.7)
       else:
          self._shooter.setSpeed(0)
       if transport:
