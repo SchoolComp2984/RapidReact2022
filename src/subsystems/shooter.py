@@ -31,8 +31,10 @@ class Shooter:
       if self.colorSensor.getProximity() > 230:
          if self.colorSensor.getRawColor().red < self.colorSensor.getRawColor().blue + 57:
             color = constants.BLUE
+            print ("blue" , color, self.alliance_color)
          else:
             color = constants.RED
+            print ("red" , color, self.alliance_color)
          if color == self.alliance_color:
             return True
          else: 

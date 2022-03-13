@@ -23,17 +23,21 @@ class Intake:
       self.ball_sensor = _ball_sensor
 
    def execute(self, motor_power_mult):
+      retval = False
       if self.state == self.IDLE:
+         retval = False # not using motors
          if self.intaker.getCameraInfo()[0]:
             self.state = self.TURNING
       elif self.state == self.TURNING:
          delta_angle = self.intaker.getCameraInfo()[1] # get angle of target
          self.target_angle = self.drive.getYaw() - delta_angle
          self.drive.absoluteDrive(0, 0, self.target_angle, False, motor_power_mult)
+         retval = True # using motors
          if delta_angle < 2 and delta_angle > -2: #limit angle in degrees
             self.state = self.MOVING
       elif self.state == self.MOVING:
          self.state = self.IDLE
+         retval = False # not using motors
          # power = 0
          # delta_angle = self.intaker.getCameraInfo()[1] # get angle of target
          # self.target_angle = self.drive.getYaw() - delta_angle
@@ -48,6 +52,7 @@ class Intake:
          #    self.state = self.IDLE
       else:
          pass
+      return retval
 
    def reset(self):
       self.state = self.IDLE

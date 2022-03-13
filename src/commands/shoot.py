@@ -21,7 +21,14 @@ class Shoot:
       self.target_angle = self.drive.getYaw() - 180
       self.pidshoot = pid.PID()
       self.pidshoot.set_pid(0.0002, 0.000005, 0.0002, 0)
-
+      self.finishedShoot = False
+   
+   def withinAngle(self, angle, error):
+      current_angle = self.drive.getYaw()
+      diff = angle - current_angle
+      diff = ((diff + 180) % 360) - 180
+      return (abs(diff) < error)
+      
    def positioning(self, motor_power_multiplyer):
       power = 0
       delta_angle = self.shooter.getCameraInfo()[1] # get angle of target
@@ -34,7 +41,7 @@ class Shoot:
          power = 0
          self.target_angle = self.drive.getYaw()
       self.drive.absoluteDrive(power, 0, self.target_angle, False, motor_power_multiplyer)
-      print ("limelight x, limelight y: ", self.shooter.getCameraInfo()[1], self.shooter.getCameraInfo()[2])
+      #print ("limelight x, limelight y: ", self.shooter.getCameraInfo()[1], self.shooter.getCameraInfo()[2])
       return (power == 0 and abs(delta_angle) < 2 and self.shooter.hasTarget())
 
    def spinning(self, ball, motor_power_multiplyer):
@@ -44,7 +51,7 @@ class Shoot:
          self.target_angle -= 22 # shoot away from target
       if self.shooter.getCameraInfo()[2] < 10:
          forwards = -.2
-         print ("Forwards state= ", self.state, motor_power_multiplyer)
+         #print ("Forwards state= ", self.state, motor_power_multiplyer)
       else:
          forwards = 0
       self.drive.absoluteDrive(forwards, 0, self.target_angle, False, motor_power_multiplyer)
@@ -70,8 +77,8 @@ class Shoot:
          pwr = 0
       if not manual_enabled:
          self.shooter.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr * motor_power_multiplier)
-      if debug:
-         print ("spin: ", current_vel, " ", self.flywheel_desiredSpeed, " ", delta)
+      #if debug:
+         #print ("spin: ", current_vel, " ", self.flywheel_desiredSpeed, " ", delta)
       return (abs(delta) < self.flywheel_desiredSpeed/10) # within 10% of desired speed
    
    def transporting(self, angle, manual_enabled):
@@ -118,25 +125,27 @@ class Shoot:
             retval = True # controlling drive motors
             if self.spinning(self.ball, motor_power_multiplyer) and self.spin_pid(True, motor_power_multiplyer, manual_shooter_enabled):
                self.state = self.FIRING
-               print ("state=firing")
+               print ("state=firing ", "limelight y: ", self.shooter.getCameraInfo()[2], "rpm: ", self.shooter.shooterMotor.getSelectedSensorVelocity(0))
                self.startServoTime = wpilib.Timer.getFPGATimestamp()
          else:
             self.state = self.IDLE
             print ("state=idle")
       elif self.state == self.FIRING:
          if button_pressed:
-            retval = True # controlling drive motors
-            self.spinning(self.ball, motor_power_multiplyer)
+            retval = True #controlling drive motors
+            #self.spinning(self.ball, motor_power_multiplyer)
+            self.drive.stop()
             self.transporting(ID.SERVO_MAX, manual_transport_enabled)
-            if self.startServoTime + 0.4 < wpilib.Timer.getFPGATimestamp():
+            if self.startServoTime + 0.6 < wpilib.Timer.getFPGATimestamp():
                self.state = self.RELAXING
                print ("state=relaxing")
          else:
             self.state = self.RELAXING
       elif self.state == self.RELAXING:
          self.transporting(ID.SERVO_MIN, manual_transport_enabled)
-         if self.startServoTime + 0.8 < wpilib.Timer.getFPGATimestamp():
+         if self.startServoTime + 1.2 < wpilib.Timer.getFPGATimestamp():
             self.state = self.IDLE
+            self.finishedShoot = True
             print ("state=idle")
       else:
          self.state = self.IDLE

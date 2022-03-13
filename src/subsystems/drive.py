@@ -73,7 +73,7 @@ class Drive:
       self.frontRight.set((speed + leftright - steer) * mult)
       self.backLeft.set((speed + leftright + steer) * mult)
       self.backRight.set((speed - leftright - steer) * mult)
-      print("rotation: ", cur_rotation, "delta: ",delta_angle)
+      #print("rotation: ", cur_rotation, "delta: ",delta_angle)
 
    #Drive method for mecanum wheels
    def mecanumDrive(self, joy_y, joy_x, desired_angle):
