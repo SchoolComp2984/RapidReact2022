@@ -47,10 +47,10 @@ class Shooter:
       self.transportServo.setAngle(180)
 
    def transportUp(self):
-      self.transportServo.setAngle(ID.SERVO_MAX)
+      self.transportServo.setAngle(ID.SERVO_MIN)
       
    def transportDown(self):
-      self.transportServo.setAngle(ID.SERVO_MIN)
+      self.transportServo.setAngle(ID.SERVO_MAX)
    
    def hasTarget(self):
       target = self.getCameraInfo()[0]

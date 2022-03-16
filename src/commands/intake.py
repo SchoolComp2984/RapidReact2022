@@ -22,36 +22,42 @@ class Intake:
       self.intaker = _intaker
       self.ball_sensor = _ball_sensor
 
-   def execute(self, motor_power_mult):
+   def execute(self, button_pressed, drive_speed, motor_power_mult):
       retval = False
-      if self.state == self.IDLE:
-         retval = False # not using motors
-         if self.intaker.getCameraInfo()[0]:
-            self.state = self.TURNING
-      elif self.state == self.TURNING:
-         delta_angle = self.intaker.getCameraInfo()[1] # get angle of target
-         self.target_angle = self.drive.getYaw() - delta_angle
-         self.drive.absoluteDrive(0, 0, self.target_angle, False, motor_power_mult)
-         retval = True # using motors
-         if delta_angle < 2 and delta_angle > -2: #limit angle in degrees
-            self.state = self.MOVING
-      elif self.state == self.MOVING:
-         self.state = self.IDLE
-         retval = False # not using motors
-         # power = 0
-         # delta_angle = self.intaker.getCameraInfo()[1] # get angle of target
-         # self.target_angle = self.drive.getYaw() - delta_angle
-         # if self.intaker.getCameraInfo()[2] < self.minBallDistance:
-         #    power = .2 #back up if too close
-         # if self.intaker.getCameraInfo()[2] > self.maxBallDistance:
-         #    power = -.5 #move forward if too far
-         # if not self.intaker.hasTarget():
-         #    power = 0
-         # self.drive.absoluteDrive(power, 0, self.target_angle, motor_power_mult)
-         # if self.intaker.getCameraInfo()[2] < -120 and self.intaker.getCameraInfo()[2] > -150:
-         #    self.state = self.IDLE
+      if button_pressed:
+         self.intaker.spin_bottom(1)
+         if self.ball_sensor.getBallStatus() == None:
+            self.intaker.spin_top(1)
+         if self.state == self.IDLE:
+            retval = False # not using motors
+            if self.intaker.getCameraInfo()[0]:
+               self.state = self.TURNING
+         elif self.state == self.TURNING:
+            delta_angle = self.intaker.getCameraInfo()[3] # get angle of target
+            self.target_angle = self.drive.getYaw() - delta_angle
+            self.drive.absoluteDrive(drive_speed, 0, self.target_angle, False, motor_power_mult)
+            retval = True # using motors
+            if delta_angle < 4 and delta_angle > -4: #limit angle in degrees
+               self.state = self.MOVING
+         elif self.state == self.MOVING:
+            self.state = self.IDLE
+            retval = False # not using motors
+            # power = 0
+            # delta_angle = self.intaker.getCameraInfo()[1] # get angle of target
+            # self.target_angle = self.drive.getYaw() - delta_angle
+            # if self.intaker.getCameraInfo()[2] < self.minBallDistance:
+            #    power = .2 #back up if too close
+            # if self.intaker.getCameraInfo()[2] > self.maxBallDistance:
+            #    power = -.5 #move forward if too far
+            # if not self.intaker.hasTarget():
+            #    power = 0
+            # self.drive.absoluteDrive(power, 0, self.target_angle, motor_power_mult)
+            # if self.intaker.getCameraInfo()[2] < -120 and self.intaker.getCameraInfo()[2] > -150:
+            #    self.state = self.IDLE
+         else:
+            pass
       else:
-         pass
+         self.state = self.IDLE
       return retval
 
    def reset(self):

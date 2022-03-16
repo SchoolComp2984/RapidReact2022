@@ -40,9 +40,9 @@ class Intaker:
 
    def getCameraInfo(self):
       networkTableData = NetworkTables.getTable("SmartDashboard")
-      hasBall = networkTableData.getNumber("ball_on_screen", False)
-      x = networkTableData.getNumber("ball_x", 0) # -200 to 200 px
-      y = networkTableData.getNumber("ball_y", 0) # -150 to 150 px
+      hasBall = networkTableData.getValue("ball_on_screen", False)
+      x = networkTableData.getNumber("ball_x", 0) # -160 to 160 px
+      y = networkTableData.getNumber("ball_y", 0) # -120 to 120 px
       angle = networkTableData.getNumber("angle", 0)
       distance = networkTableData.getNumber("distance", 0)
       data = [hasBall, x, y, angle, distance]
