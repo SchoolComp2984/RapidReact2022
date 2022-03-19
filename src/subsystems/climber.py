@@ -9,3 +9,11 @@ class Climber:
       # speed inbetween 0 and 1
       self.left_motor.set(speed)
       self.right_motor.set(speed)
+      # if speed > 0:
+      #    self.right_motor.set(speed + 0.03)
+      # elif speed < 0:
+      #    self.right_motor.set(speed - 0.03)
+
+   def stop(self):
+      self.left_motor.set(0)
+      self.right_motor.set(0)

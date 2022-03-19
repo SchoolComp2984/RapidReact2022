@@ -20,7 +20,7 @@ class Shooter:
       tx = networkTableData.getNumber("tx", None) # horizontal offset (-27 to 27 degrees)
       ty = networkTableData.getNumber("ty", None) # vertical offset (-20.5 to 20.5 degrees)
       ta = networkTableData.getNumber("ta", None) # % of screen covered by target
-      data = [tv, tx, ty, (ta * 100)]
+      data = [tv, tx, ty, ta]
       return data
    
    def printBallStatus(self):
@@ -31,10 +31,10 @@ class Shooter:
       if self.colorSensor.getProximity() > 230:
          if self.colorSensor.getRawColor().red < self.colorSensor.getRawColor().blue + 57:
             color = constants.BLUE
-            print ("blue" , color, self.alliance_color)
+            # print ("blue" , color, self.alliance_color)
          else:
             color = constants.RED
-            print ("red" , color, self.alliance_color)
+            # print ("red" , color, self.alliance_color)
          if color == self.alliance_color:
             return True
          else: 

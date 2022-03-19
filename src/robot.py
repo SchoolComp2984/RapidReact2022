@@ -19,7 +19,7 @@ class MyRobot(wpilib.TimedRobot):
       self.enable_driving = True
       self.enable_intake = True
       self.enable_shooter = True
-      self.enable_climber = False
+      self.enable_climber = True
       # automated drive is used when the limelight and IMU are both working...
       # ...if they are not working then we can default to a completely teleoperated drive
       self.automated_drive = True
@@ -30,8 +30,8 @@ class MyRobot(wpilib.TimedRobot):
       #  self.pid.set_pid(0.01, 0.0002, 0.05, 0)
       self.pid.set_pid(0.01, 0.0002, 0.05, 0)
 
-      self.printTimer = wpilib.Timer()
-      self.printTimer.start()
+      # self.printTimer = wpilib.Timer()
+      # self.printTimer.start()
 
       #BALL COLOR PROCESSING
       self.alliance_color = constants.RED
@@ -74,57 +74,67 @@ class MyRobot(wpilib.TimedRobot):
 
       self.colorSensor = rev.ColorSensorV3(wpilib.I2C.Port(0))
 
-      # self.climbLeftMotor = ctre.WPI_TalonSRX(11)
-      # self.climbRightMotor = ctre.WPI_TalonSRX(12)
+      self.climbLeftMotor = ctre.WPI_TalonSRX(ID.CLIMB_LEFT)
+      self.climbRightMotor = ctre.WPI_TalonSRX(ID.CLIMB_RIGHT)
+      # self.climbLeftMotor.configForwardLimitSwitchSource(ctre.LimitSwitchSource.FeedbackConnector, ctre.LimitSwitchNormal.NormallyClosed, ID.CLIMB_LEFT)
+      # self.climbRightMotor.configForwardLimitSwitchSource(ctre.LimitSwitchSource.FeedbackConnector, ctre.LimitSwitchNormal.NormallyClosed, ID.CLIMB_RIGHT)
+
 
       self.talon_motors = [ 
          self.intakeSpin,
          self.backLeft, 
          self.backRight, 
          self.frontLeft, 
-         self.frontRight
+         self.frontRight,
+         self.climbRightMotor,
+         self.climbLeftMotor
       ]
 
       #subsystems: These combine multiple components into a coordinated system
       self._drive = drive.Drive(self.frontLeft, self.backLeft, self.frontRight, self.backRight, self.drive_imu, self.pid)
       self._shooter = shooter.Shooter(self.shooterMotor, self.shooterServo, self.colorSensor, self.alliance_color)
       self._intaker = intaker.Intaker(self.intakeSpin, self.intakeUpperSpin)
-      # self._climber = climber.Climber(self.climbLeftMotor, self.climbRightMotor)
+      self._climber = climber.Climber(self.climbLeftMotor, self.climbRightMotor)
       self._ball_sensor = ball_sensor.BallSensor(self.colorSensor, self.alliance_color)
 
       #commands: These utilize subsystems to perform autonomous routines.
       self._shoot = shoot.Shoot(self._drive, self._shooter)
-      self._intake = intake.Intake(self._drive, self._intaker, self._ball_sensor)
+      # self._intake = intake.Intake(self._drive, self._intaker, self._ball_sensor)
 
       self.frontLeft.setInverted(True)
       self.backLeft.setInverted(True)
       self.frontRight.setInverted(False)
       self.backRight.setInverted(False)
       self.intakeSpin.setInverted(True)
-
+      self.climbRightMotor.setInverted(True)
+      
       for motor in self.talon_motors:
          motor.setNeutralMode(ctre.NeutralMode.Brake)
+
+      self.climbLeftMotor.setNeutralMode(ctre.NeutralMode.Brake)
 
       
    def autonomousInit(self) -> None:
       self.alliance = self.driver_station.getAlliance()
+
       if wpilib.DriverStation.Alliance.kBlue == self.alliance:
          self.alliance_color = constants.BLUE
          sd.putNumber("alliance_color", constants.BLUE)
-         print("color: blue")
+         # print("color: blue")
       else:
          self.alliance_color = constants.RED
          sd.putNumber("alliance_color", constants.RED)
-         print("color: red")
+         # print("color: red")
+
       self._shooter.alliance_color = self.alliance_color
 
       self.NO_BALL = 0
       self.ONE_BALL = 1
       self.TWO_BALLS = 2
       self.THREE_BALLS = 3
-
+      self.MOVE_BACK = 4
       # This var determines which type of autonomous routine you want to use at the start of match
-      self.autoType = self.TWO_BALLS
+      self.autoType = self.MOVE_BACK
 
       self.backup_start_time = 0.0
       self.rev_start_time = 0.0
@@ -144,39 +154,29 @@ class MyRobot(wpilib.TimedRobot):
       self.TRANSPORTING = 6
       self.SECONDMOVING = 7
       self.SECONDINTAKE = 8
+      self.THIRDMOVING = 11
+      self.SECONDWAIT = 12
+      self.SHOOTINGSECOND = 9
       self.DONE = 10
       self.state = self.IDLE 
 
 
    def autonomousPeriodic(self) -> None:
       try:
-         if self.autoType == self.ONE_BALL:
-            # if self.state == self.IDLE:
-            #    self.state = self.SHOOTING
-            #    self.rev_start_time = wpilib.Timer.getFPGATimestamp()
+         if self.autoType == self.MOVE_BACK:
+            if self.state == self.IDLE:
+               self.start_time = wpilib.Timer.getFPGATimestamp()
+               self.state = self.MOVING
+            elif self.state == self.MOVING:
+               self._drive.arcadeDrive(0.2, 0, 1)
+               if self.start_time + 2.5 < wpilib.Timer.getFPGATimestamp():
+                  self.state = self.DONE
+            elif self.state == self.DONE:
+               self._drive.stop()
+            else:
+               self.state = self.IDLE
 
-            # elif self.state == self.SHOOTING:
-            #    self._shooter.setSpeed(0.9)
-            #    if self.rev_start_time + 0.6 < wpilib.Timer.getFPGATimestamp():
-            #       self.trans_start_time = wpilib.Timer.getFPGATimestamp()
-            #       self.state = self.TRANSPORTING
-
-            # elif self.state == self.TRANSPORTING:
-            #    self._shooter.transportUp()
-            #    self._shooter.setSpeed(0.9)
-            #    if self.trans_start_time + 1.0 < wpilib.Timer.getFPGATimestamp():
-            #       self.backup_start_time = wpilib.Timer.getFPGATimestamp()
-            #       self.state = self.MOVING
-
-            # elif self.state == self.MOVING:
-            #    self._drive.arcadeDrive(-0.2, 0, 1)
-            #    if self.backup_start_time + 0.2 < wpilib.Timer.getFPGATimestamp():
-            #       self.state = self.DONE
-
-            # elif self.state == self.DONE:
-            #    self._drive.stop()
-            #    self._shooter.setSpeed(0.9)
-            #    self._shooter.transportDown()
+         elif self.autoType == self.ONE_BALL:
             if self.state == self.IDLE:
                self.state = self.SHOOTING
                self._shoot.finishedShoot = False
@@ -196,7 +196,7 @@ class MyRobot(wpilib.TimedRobot):
 
             elif self.state == self.MOVING:
                self._drive.arcadeDrive(0.2, 0, 1) #Drive backwards
-               if self.backup_start_time + 2.5 < wpilib.Timer.getFPGATimestamp():
+               if self.backup_start_time + 3 < wpilib.Timer.getFPGATimestamp():
                   self.state = self.DONE
 
             elif self.state == self.DONE:
@@ -205,9 +205,7 @@ class MyRobot(wpilib.TimedRobot):
             else:
                self.state = self.IDLE
 
-
          elif self.autoType == self.TWO_BALLS:
-            # MAKE ROBOT MOVE BACKWARDS (OR FORWARDS AND FAST) FIRST TO LOWER INTAKE
             if self.state == self.IDLE:
                self.startingAngle = self.drive_imu.getYaw()
                self.state = self.MOVING
@@ -215,8 +213,8 @@ class MyRobot(wpilib.TimedRobot):
 
             elif self.state == self.MOVING:
                self._intaker.spin_bottom(1)
-               self._drive.arcadeDrive(-0.3, 0, 1) #drive forwards
-               if self.start_time + 0.5 < wpilib.Timer.getFPGATimestamp():
+               self._drive.arcadeDrive(-0.2, 0, 1) #drive forwards
+               if self.start_time + 1 < wpilib.Timer.getFPGATimestamp():
                   self.start_time = wpilib.Timer.getFPGATimestamp()
                   self.state = self.WAIT
             
@@ -228,15 +226,22 @@ class MyRobot(wpilib.TimedRobot):
 
             elif self.state == self.SECONDMOVING:
                self._intaker.spin_bottom(1)
-               self._drive.arcadeDrive(-0.2, 0, 1) #drive forwards
-               if self.start_time + 1.5 < wpilib.Timer.getFPGATimestamp():
+               self._drive.arcadeDrive(-0.15, 0, 1) #drive forwards
+               if self.start_time + 3 < wpilib.Timer.getFPGATimestamp():
+                  self.start_time = wpilib.Timer.getFPGATimestamp()
+                  self.state = self.SECONDWAIT
+
+            elif self.state == self.SECONDWAIT:
+               self._intaker.spin_bottom(1)
+               self._drive.stop()
+               if self.start_time + 0.6 < wpilib.Timer.getFPGATimestamp():
                   self.start_time = wpilib.Timer.getFPGATimestamp()
                   self.state = self.TURNING
 
             elif self.state == self.TURNING:
-               self._drive.absoluteDrive(0, 0, self.startingAngle + 180, True, 1)
-               if self._shooter.hasTarget() and self._shoot.withinAngle(self.startingAngle + 180, 10):
-                  self.state = self.DONE # self.SHOOTING
+               self._drive.absoluteDrive(0, 0, self.startingAngle + 190, True, 0.6)
+               if self._shooter.hasTarget() and self._shoot.withinAngle(self.startingAngle + 190, 4):
+                  self.state = self.SHOOTING # self.SHOOTING
 
             elif self.state == self.SHOOTING:
                self._shoot.execute(True, False, False, 1)
@@ -247,15 +252,24 @@ class MyRobot(wpilib.TimedRobot):
 
             elif self.state == self.SECONDINTAKE:
                self._intaker.spin_top(1)
-               if self.start_time + 2 < wpilib.Timer.getFPGATimestamp():
+               self._intaker.spin_bottom(1)
+               self._shooter.transportDown()
+               if self.start_time + 1.2 < wpilib.Timer.getFPGATimestamp():
                   self.start_time = wpilib.Timer.getFPGATimestamp()
                   self.state == self.SHOOTINGSECOND
 
             elif self.state == self.SHOOTINGSECOND:
                self._shoot.execute(True, False, False, 1)
                if self._shoot.finishedShoot:
+                  self.start_time = wpilib.Timer.getFPGATimestamp()
+                  self.state = self.THIRDMOVING
+                  self._shoot.finishedShoot = False 
+
+            elif self.state == self.THIRDMOVING:
+               self._drive.arcadeDrive(0.2, 0, 1) #drive forwards
+               if self.start_time + 1.5 < wpilib.Timer.getFPGATimestamp():
+                  self.start_time = wpilib.Timer.getFPGATimestamp()
                   self.state = self.DONE
-                  self._shoot.finishedShoot = False  
 
             elif self.state == self.DONE:
                self._intaker.stop()
@@ -264,23 +278,30 @@ class MyRobot(wpilib.TimedRobot):
             else:
                self.state = self.IDLE
                self._drive.stop()
-
       except:
-         raise
+         pass
 
+   def autonomousExit(self) -> None:
+      self._drive.stop()
+      self._shooter.setSpeed(0)
+      self._intaker.stop()
 
    def teleopInit(self):
-      print("Starting")
+      # print("teleop starting")
+
       self.alliance = self.driver_station.getAlliance()
+
       if wpilib.DriverStation.Alliance.kBlue == self.alliance:
          self.alliance_color = constants.BLUE
          sd.putNumber("alliance_color", constants.BLUE)
-         print("color: blue")
+         # print("color: blue")
       else:
          self.alliance_color = constants.RED
          sd.putNumber("alliance_color", constants.RED)
-         print("color: red")
+         # print("color: red")
+
       self._shooter.alliance_color = self.alliance_color
+
       #Shorting rotary controller with the spinny thing 
       # This is assuming the drive controller has button 12 shorted.
       while not wpilib.Joystick(ID.ROTARY_CONTROLLER).getRawButton(12) or wpilib.Joystick(ID.OPERATOR_CONTROLLER).getRawButton(12):
@@ -293,16 +314,16 @@ class MyRobot(wpilib.TimedRobot):
       self.rotary_buttons = wpilib.interfaces.GenericHID(ID.ROTARY_CONTROLLER)
       self.operator_controller = wpilib.interfaces.GenericHID(ID.OPERATOR_CONTROLLER)
       self.joystick_controller = wpilib.XboxController(ID.OPERATOR_CONTROLLER)
-      #self.HAND_LEFT = wpilib.interfaces.GenericHID.Hand.kLeftHand
-      #self.HAND_RIGHT = wpilib.interfaces.GenericHID.Hand.kRightHand
-      print("Operator controller id: ", str(ID.OPERATOR_CONTROLLER))
-      print("Rotary controller id: ", str(ID.ROTARY_CONTROLLER))
+
+      # print("Operator controller id: ", str(ID.OPERATOR_CONTROLLER))
+      # print("Rotary controller id: ", str(ID.ROTARY_CONTROLLER))
 
       if self.enable_driving:
          self.rotary_controller.reset_angle(self._drive.getYaw())
       
    def teleopPeriodic(self):
       try:
+      
          # TRANSFER THESE TO ID.PY WHEN WE GET THE FINAL BUTTON ID'S
          auto_shoot_button = self.operator_controller.getRawButton(3)
          manual_transport_button = self.operator_controller.getRawButton(2)
@@ -316,16 +337,16 @@ class MyRobot(wpilib.TimedRobot):
          manual_intake_spin_reverse = self.operator_controller.getRawButton(6)
          manual_intake_spin_toggle =  self.operator_controller.getRawButton(8)
 
-         manual_climp_up = self.operator_controller.getRawButton(9)
-         manual_climb_down =  self.operator_controller.getRawButton(10)
+         manual_climb_up = self.operator_controller.getRawButton(10)
+         manual_climb_down =  self.operator_controller.getRawButton(9)
 
          self.battery_voltage = self.driver_station.getBatteryVoltage()
          self.motor_power_multiplyer = math_functions.clamp(self.battery_voltage - 9.5, 0, 1)
 
          # CAMERA DEBUGGING LINES
-         if self.printTimer.hasPeriodPassed(0.5):
-            print("intake camera data: ", self._intaker.getCameraInfo())
-         
+         # if self.printTimer.hasPeriodPassed(0.5):
+            # print("intake camera data: ", self._intaker.getCameraInfo())
+            # print("limelight x, limelight y: ", self._shooter.getCameraInfo()[1], self._shooter.getCameraInfo()[2])
 
          self.manual_drive = self.rotary_controller.getRawButton(11)
          
@@ -335,9 +356,10 @@ class MyRobot(wpilib.TimedRobot):
             #if False:
             if self._shoot.execute(auto_shoot_button, manual_transport_button, manual_shoot_button, self.motor_power_multiplyer):
                self.rotary_controller.reset_angle(self.drive_imu.getYaw())
-            elif False:
-            # elif self._intake.execute(auto_intake_button, y, self.motor_power_multiplyer):
-               self.rotary_controller.reset_angle(self.drive_imu.getYaw())
+
+            # elif False:
+            # # elif self._intake.execute(auto_intake_button, y, self.motor_power_multiplyer):
+            #    self.rotary_controller.reset_angle(self.drive_imu.getYaw())
             else:
                if (self.manual_drive):
                   self.manualDrive()
@@ -349,7 +371,7 @@ class MyRobot(wpilib.TimedRobot):
                if self.enable_intake:
                   self.manualIntake(manual_intake_spin_toggle, manual_intake_spin_bottom, manual_intake_spin_top, manual_intake_spin_reverse, manual_intake_spin_both)
                if self.enable_climber:
-                  pass
+                  self.manualClimber(manual_climb_up, manual_climb_down)
 
       except:
          pass
@@ -386,13 +408,25 @@ class MyRobot(wpilib.TimedRobot):
          self._intaker.stop()
 
    def manualShooter(self, shoot, transport):
-      if shoot:
-         self._shooter.setSpeed(0.7)
+      # if shoot:
+      #    self._shooter.setSpeed(0.5)
+      # else:
+      #    self._shooter.setSpeed(0)
       if transport:
-         print("TRAPSNPORT")
          self._shooter.transportUp()
       else:
          self._shooter.transportDown()
+
+   def manualClimber(self, up, down):
+      if up:
+         self._climber.moveClimb(.5)
+      elif down:
+         self._climber.moveClimb(-.7)
+      else:
+         self._climber.stop()
+
+         
+
 
    def disabledInit(self) -> None:
       sd.delete("alliance_color")

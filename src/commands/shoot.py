@@ -10,6 +10,7 @@ class Shoot:
    SPINNING = 2
    FIRING = 3
    RELAXING = 4
+   FINISHED = 5
    state = IDLE
    min_LimelightDistance = 18 #angle
    max_LimelightDistance = 0 #angle
@@ -57,12 +58,12 @@ class Shoot:
       self.drive.absoluteDrive(forwards, 0, self.target_angle, False, motor_power_multiplyer)
       self.flywheel_desiredSpeed = math_functions.shootInterp(self.shooter.getCameraInfo()[2])
       if ball == False:
-         return abs(delta_angle) > 22-2
+         return abs(delta_angle) > 20
       return (abs(delta_angle) < 2)
 
    def firing(self):
       self.flywheel_desiredSpeed = math_functions.shootInterp(self.shooter.getCameraInfo()[2])
-      self.shooter.transportServo.setAngle(180)
+      self.shooter.transportUp()
 
    def spin_pid(self, debug, motor_power_multiplier, manual_enabled):
       current_vel = self.shooter.shooterMotor.getSelectedSensorVelocity(0)
@@ -75,15 +76,14 @@ class Shoot:
          pwr = -0.5
       if (self.flywheel_desiredSpeed == 0):
          pwr = 0
-      if not manual_enabled:
-         self.shooter.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr * motor_power_multiplier)
+      self.shooter.shooterMotor.set(ctre.TalonFXControlMode.PercentOutput, pwr * motor_power_multiplier)
       #if debug:
          #print ("spin: ", current_vel, " ", self.flywheel_desiredSpeed, " ", delta)
       return (abs(delta) < self.flywheel_desiredSpeed/10) # within 10% of desired speed
    
    def transporting(self, angle, manual_enabled):
-      if not manual_enabled:
-         self.shooter.transportServo.setAngle(angle)
+      # if not manual_enabled:
+      self.shooter.transportServo.setAngle(angle)
 
    #always run this function in robot.py teleop
    #THX FOR PUTTING THE MANUAL STUFF IN, GOOD WORK - GREG
@@ -102,12 +102,14 @@ class Shoot:
          #    self.transporting(ID.SERVO_MIN)
          # THIS GOT MOVED TO OUTSIDE THE FUNCTION IN ROBOT.PY
          if button_pressed:
+            # print ("auto_shoot pressed")
             self.ball = self.shooter.getBallStatus()
             #self.shooter.printBallStatus()
             if (self.ball == True or self.ball == False) and self.shooter.hasTarget():
                self.retval = True
                self.state = self.POSITIONING
-               print ("state=positioning ", self.ball)
+               # print ("state=positioning ", self.ball)
+            #print ("ball, target" , self.ball, self.shooter.hasTarget())
       elif self.state == self.POSITIONING:
          # roughly turn and move into min/max distance
          if button_pressed:
@@ -116,10 +118,10 @@ class Shoot:
             if self.positioning(motor_power_multiplyer):
                self.state = self.SPINNING
                self.pidshoot.integral = 0
-               print ("state=spinning")
+               # print ("state=spinning")
          else:
             self.state = self.IDLE
-            print ("state=idle")
+            # print ("state=idle")
       elif self.state == self.SPINNING:
          if button_pressed:
             retval = True # controlling drive motors
@@ -129,25 +131,25 @@ class Shoot:
                self.startServoTime = wpilib.Timer.getFPGATimestamp()
          else:
             self.state = self.IDLE
-            print ("state=idle")
+            # print ("state=idle")
       elif self.state == self.FIRING:
          if button_pressed:
             retval = True #controlling drive motors
             #self.spinning(self.ball, motor_power_multiplyer)
             self.drive.stop()
-            self.transporting(ID.SERVO_MAX, manual_transport_enabled)
+            self.transporting(ID.SERVO_MIN, manual_transport_enabled)
             if self.startServoTime + 0.6 < wpilib.Timer.getFPGATimestamp():
                self.state = self.RELAXING
-               print ("state=relaxing")
+               # print ("state=relaxing")
          else:
             self.state = self.RELAXING
       elif self.state == self.RELAXING:
-         self.transporting(ID.SERVO_MIN, manual_transport_enabled)
+         self.transporting(ID.SERVO_MAX, manual_transport_enabled)
          if self.startServoTime + 1.2 < wpilib.Timer.getFPGATimestamp():
-            self.state = self.IDLE
             self.finishedShoot = True
-            print ("state=idle")
+            self.state = self.IDLE
+            # print ("state=idle")
       else:
          self.state = self.IDLE
-         print ("state=idle")
+         # print ("state=idle")
       return retval

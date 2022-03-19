@@ -16,9 +16,9 @@ class Intaker:
 
    def spin_top(self, dir : int):
       if dir > 0:
-         self.top_spin_motor.setVoltage(self.OUTAKE_POWER * 2)
+         self.top_spin_motor.setVoltage(self.OUTAKE_POWER * 2.4)
       elif dir < 0:
-         self.top_spin_motor.setVoltage(self.INTAKE_POWER * 2)
+         self.top_spin_motor.setVoltage(self.INTAKE_POWER * 2.4)
       else:
          self.top_spin_motor.setVoltage(0)
 
