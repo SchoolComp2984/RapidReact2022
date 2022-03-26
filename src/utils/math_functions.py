@@ -29,9 +29,9 @@ def shootInterp(limelight_angle):
        array = [ \
        [0,15000],\
        [9.8,7000],\
-       [12.5,6200],\
-       [15,5500],\
-       [18,5000]]
+       [12.5,6700],\
+       [15,6300],\
+       [18,6000]]
        return interp_Array(limelight_angle, array)
 
 def clamp(num, min_value, max_value):

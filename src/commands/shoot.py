@@ -32,7 +32,7 @@ class Shoot:
       
    def positioning(self, motor_power_multiplyer):
       power = 0
-      delta_angle = self.shooter.getCameraInfo()[1] # get angle of target
+      delta_angle = self.shooter.getCameraInfo()[1] - 1 # get angle of target + offset
       self.target_angle = self.drive.getYaw() - delta_angle
       if self.shooter.getCameraInfo()[2] > self.min_LimelightDistance:
          power = .2 #back up if too close
@@ -46,19 +46,19 @@ class Shoot:
       return (power == 0 and abs(delta_angle) < 2 and self.shooter.hasTarget())
 
    def spinning(self, ball, motor_power_multiplyer):
-      delta_angle = self.shooter.getCameraInfo()[1] # get angle of target
+      delta_angle = self.shooter.getCameraInfo()[1] - 1 # get angle of target + offset
       self.target_angle = self.drive.getYaw() - delta_angle
-      if ball == False:
-         self.target_angle -= 22 # shoot away from target
-      if self.shooter.getCameraInfo()[2] < 10:
+      # if ball == False:
+      #    self.target_angle -= 22 # shoot away from target
+      if self.shooter.getCameraInfo()[2] < 9:
          forwards = -.2
          #print ("Forwards state= ", self.state, motor_power_multiplyer)
       else:
          forwards = 0
       self.drive.absoluteDrive(forwards, 0, self.target_angle, False, motor_power_multiplyer)
       self.flywheel_desiredSpeed = math_functions.shootInterp(self.shooter.getCameraInfo()[2])
-      if ball == False:
-         return abs(delta_angle) > 20
+      # if ball == False:
+      #    return abs(delta_angle) > 20
       return (abs(delta_angle) < 2)
 
    def firing(self):
@@ -104,7 +104,7 @@ class Shoot:
          if button_pressed:
             # print ("auto_shoot pressed")
             self.ball = self.shooter.getBallStatus()
-            #self.shooter.printBallStatus()
+            # self.shooter.printBallStatus()
             if (self.ball == True or self.ball == False) and self.shooter.hasTarget():
                self.retval = True
                self.state = self.POSITIONING
@@ -126,9 +126,9 @@ class Shoot:
          if button_pressed:
             retval = True # controlling drive motors
             if self.spinning(self.ball, motor_power_multiplyer) and self.spin_pid(True, motor_power_multiplyer, manual_shooter_enabled):
-               self.state = self.FIRING
-               print ("state=firing ", "limelight y: ", self.shooter.getCameraInfo()[2], "rpm: ", self.shooter.shooterMotor.getSelectedSensorVelocity(0))
                self.startServoTime = wpilib.Timer.getFPGATimestamp()
+               self.state = self.FIRING
+               # print("state=firing ", "limelight y: ", self.shooter.getCameraInfo()[2], "rpm: ", self.shooter.shooterMotor.getSelectedSensorVelocity(0))
          else:
             self.state = self.IDLE
             # print ("state=idle")

@@ -8,7 +8,7 @@ import rev
 class Intaker:
 
    #Big wheels
-   INTAKE_POWER = 2.4
+   INTAKE_POWER = 3.0
    OUTAKE_POWER = -3.2
    def __init__(self, _bottom_spin_motor : WPI_TalonSRX, _top_spin_motor : rev.CANSparkMax) -> None:
       self.bottom_spin_motor = _bottom_spin_motor
@@ -24,9 +24,9 @@ class Intaker:
 
    def spin_bottom(self, dir : int):
       if dir < 0:
-         self.bottom_spin_motor.setVoltage(self.OUTAKE_POWER+.5)
+         self.bottom_spin_motor.setVoltage(self.OUTAKE_POWER * 1.2)
       else:
-         self.bottom_spin_motor.setVoltage(self.INTAKE_POWER+.5)
+         self.bottom_spin_motor.setVoltage(self.INTAKE_POWER)
 
    def stop_top(self):
       self.top_spin_motor.set(0)

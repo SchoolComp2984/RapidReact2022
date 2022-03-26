@@ -134,7 +134,7 @@ class MyRobot(wpilib.TimedRobot):
       self.THREE_BALLS = 3
       self.MOVE_BACK = 4
       # This var determines which type of autonomous routine you want to use at the start of match
-      self.autoType = self.MOVE_BACK
+      self.autoType = self.ONE_BALL
 
       self.backup_start_time = 0.0
       self.rev_start_time = 0.0
@@ -157,6 +157,7 @@ class MyRobot(wpilib.TimedRobot):
       self.THIRDMOVING = 11
       self.SECONDWAIT = 12
       self.SHOOTINGSECOND = 9
+      self.FOURTHMOVING = 13
       self.DONE = 10
       self.state = self.IDLE 
 
@@ -178,25 +179,32 @@ class MyRobot(wpilib.TimedRobot):
 
          elif self.autoType == self.ONE_BALL:
             if self.state == self.IDLE:
-               self.state = self.SHOOTING
+               self.start_time = wpilib.Timer.getFPGATimestamp()
+               self.state = self.SECONDMOVING
                self._shoot.finishedShoot = False
+
+            elif self.state == self.SECONDMOVING:
+               self._drive.arcadeDrive(0.25, 0, 1)
+               if self.start_time + 0.5 < wpilib.Timer.getFPGATimestamp():
+                  self.start_time = wpilib.Timer.getFPGATimestamp()
+                  self.state = self.PREMOVE
+
+            elif self.state == self.PREMOVE:
+               self._drive.stop()
+               if self.start_time + 1 < wpilib.Timer.getFPGATimestamp():
+                  self.start_time = wpilib.Timer.getFPGATimestamp()
+                  self.state = self.SHOOTING
 
             elif self.state == self.SHOOTING:
                self._shoot.execute(True, False, False, 1)
                if self._shoot.finishedShoot:
-                  self.backup_start_time = wpilib.Timer.getFPGATimestamp()
+                  self.start_time = wpilib.Timer.getFPGATimestamp()
                   self.state = self.MOVING
                   self._shoot.finishedShoot = False
 
-            elif self.state == self.PREMOVE: #this is not used
-               self._drive.arcadeDrive(0, 0, 1)
-               if self.premove_start_time + 2 < wpilib.Timer.getFPGATimestamp():
-                  self.backup_start_time = wpilib.Timer.getFPGATimestamp()
-                  self.state = self.MOVING
-
             elif self.state == self.MOVING:
                self._drive.arcadeDrive(0.2, 0, 1) #Drive backwards
-               if self.backup_start_time + 3 < wpilib.Timer.getFPGATimestamp():
+               if self.start_time + 2.5 < wpilib.Timer.getFPGATimestamp():
                   self.state = self.DONE
 
             elif self.state == self.DONE:
@@ -206,15 +214,17 @@ class MyRobot(wpilib.TimedRobot):
                self.state = self.IDLE
 
          elif self.autoType == self.TWO_BALLS:
+
             if self.state == self.IDLE:
                self.startingAngle = self.drive_imu.getYaw()
-               self.state = self.MOVING
+               self._shoot.finishedShoot = False
                self.start_time = wpilib.Timer.getFPGATimestamp()
+               self.state = self.MOVING
 
             elif self.state == self.MOVING:
                self._intaker.spin_bottom(1)
-               self._drive.arcadeDrive(-0.2, 0, 1) #drive forwards
-               if self.start_time + 1 < wpilib.Timer.getFPGATimestamp():
+               self._drive.arcadeDrive(-0.3, 0, 1) #drive forwards
+               if self.start_time + 0.5 < wpilib.Timer.getFPGATimestamp():
                   self.start_time = wpilib.Timer.getFPGATimestamp()
                   self.state = self.WAIT
             
@@ -226,49 +236,62 @@ class MyRobot(wpilib.TimedRobot):
 
             elif self.state == self.SECONDMOVING:
                self._intaker.spin_bottom(1)
-               self._drive.arcadeDrive(-0.15, 0, 1) #drive forwards
-               if self.start_time + 3 < wpilib.Timer.getFPGATimestamp():
+               self._drive.arcadeDrive(-0.3, 0, 1) #drive forwards
+               if self.start_time + 1.8 < wpilib.Timer.getFPGATimestamp():
                   self.start_time = wpilib.Timer.getFPGATimestamp()
                   self.state = self.SECONDWAIT
 
             elif self.state == self.SECONDWAIT:
                self._intaker.spin_bottom(1)
                self._drive.stop()
-               if self.start_time + 0.6 < wpilib.Timer.getFPGATimestamp():
-                  self.start_time = wpilib.Timer.getFPGATimestamp()
+               self.startingAngle = self.drive_imu.getYaw()
+               if self.start_time + 0.4 < wpilib.Timer.getFPGATimestamp():
                   self.state = self.TURNING
 
             elif self.state == self.TURNING:
-               self._drive.absoluteDrive(0, 0, self.startingAngle + 190, True, 0.6)
-               if self._shooter.hasTarget() and self._shoot.withinAngle(self.startingAngle + 190, 4):
-                  self.state = self.SHOOTING # self.SHOOTING
+               self._drive.absoluteDrive(0, 0, self.startingAngle + 180, True, 0.6)
+               if self._shooter.hasTarget() and self._shoot.withinAngle(self.startingAngle + 180, 10):
+                  self.start_time = wpilib.Timer.getFPGATimestamp()
+                  self.state = self.FOURTHMOVING
+
+            elif self.state == self.FOURTHMOVING:
+               self._drive.arcadeDrive(-0.3, 0, 1)
+               if self.start_time + 1.8 < wpilib.Timer.getFPGATimestamp():
+                  self.start_time = wpilib.Timer.getFPGATimestamp()
+                  self.state = self.PREMOVE
+
+            elif self.state == self.PREMOVE:
+               self._drive.stop()
+               self._shooter.setSpeed(0)
+               if self.start_time + 0.2 < wpilib.Timer.getFPGATimestamp():
+                  self.state = self.SHOOTING
 
             elif self.state == self.SHOOTING:
                self._shoot.execute(True, False, False, 1)
                if self._shoot.finishedShoot:
-                  self.state = self.SECONDINTAKE
                   self.start_time = wpilib.Timer.getFPGATimestamp()
                   self._shoot.finishedShoot = False
+                  self.state = self.SECONDINTAKE
 
             elif self.state == self.SECONDINTAKE:
                self._intaker.spin_top(1)
                self._intaker.spin_bottom(1)
                self._shooter.transportDown()
                if self.start_time + 1.2 < wpilib.Timer.getFPGATimestamp():
-                  self.start_time = wpilib.Timer.getFPGATimestamp()
-                  self.state == self.SHOOTINGSECOND
+                  self.state = self.SHOOTINGSECOND
 
             elif self.state == self.SHOOTINGSECOND:
+               self._intaker.spin_top(1)
+               self._intaker.spin_bottom(1)
                self._shoot.execute(True, False, False, 1)
                if self._shoot.finishedShoot:
                   self.start_time = wpilib.Timer.getFPGATimestamp()
-                  self.state = self.THIRDMOVING
                   self._shoot.finishedShoot = False 
+                  self.state = self.THIRDMOVING
 
             elif self.state == self.THIRDMOVING:
-               self._drive.arcadeDrive(0.2, 0, 1) #drive forwards
-               if self.start_time + 1.5 < wpilib.Timer.getFPGATimestamp():
-                  self.start_time = wpilib.Timer.getFPGATimestamp()
+               self._drive.arcadeDrive(0.5, 0, 1) #drive forwards
+               if self.start_time + 2 < wpilib.Timer.getFPGATimestamp():
                   self.state = self.DONE
 
             elif self.state == self.DONE:
